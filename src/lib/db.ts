@@ -3,6 +3,7 @@
 
 import * as SQLite from 'expo-sqlite';
 
+import type { ChatMessage, ChatSession, Citation, Role } from '@/types/chat';
 import type { Note, NoteAttachment, NoteComment, NoteSource } from '@/types/note';
 
 const DB_NAME = 'noteiq.db';
@@ -23,6 +24,22 @@ const SCHEMA = `
   );
   CREATE TABLE IF NOT EXISTS subjects (
     name       TEXT PRIMARY KEY NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS chat_sessions (
+    id         TEXT PRIMARY KEY NOT NULL,
+    title      TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id         TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL,
+    role       TEXT NOT NULL,
+    content    TEXT NOT NULL,
+    grounded   INTEGER NOT NULL DEFAULT 0,
+    citations  TEXT NOT NULL DEFAULT '[]',
+    error      INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
   );
 `;
@@ -206,4 +223,122 @@ export async function insertSubject(name: string): Promise<void> {
     name,
     new Date().toISOString(),
   );
+}
+
+// ── Chat history (Ask ★ conversations) ──────────────────────────────────────
+// A session is one conversation; its messages are the turns. The list view reads
+// each session's first question as a preview and counts its turns via subqueries.
+
+type SessionRow = {
+  id: string;
+  title: string;
+  preview: string | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type MessageRow = {
+  id: string;
+  role: string;
+  content: string;
+  grounded: number;
+  citations: string;
+  error: number;
+  created_at: string;
+};
+
+function parseCitations(raw: string): Citation[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Citation[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Create a new conversation row (called when the first message is sent). */
+export async function insertChatSession(session: {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO chat_sessions (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)',
+    session.id,
+    session.title,
+    session.createdAt,
+    session.updatedAt,
+  );
+}
+
+/** Bump a session's updated_at so it sorts to the top of the history list. */
+export async function touchChatSession(id: string, updatedAt: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE chat_sessions SET updated_at = ? WHERE id = ?', updatedAt, id);
+}
+
+/** Every saved conversation, most-recently-used first — the history list. */
+export async function listChatSessions(): Promise<ChatSession[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<SessionRow>(
+    `SELECT s.id, s.title, s.created_at, s.updated_at,
+       (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id = s.id) AS message_count,
+       (SELECT content FROM chat_messages m
+          WHERE m.session_id = s.id AND m.role = 'user'
+          ORDER BY m.created_at ASC LIMIT 1) AS preview
+     FROM chat_sessions s
+     ORDER BY s.updated_at DESC`,
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    preview: r.preview ?? '',
+    messageCount: r.message_count,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+/** All turns of one conversation, oldest first (chat reading order). */
+export async function listChatMessages(sessionId: string): Promise<ChatMessage[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<MessageRow>(
+    'SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC',
+    sessionId,
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    role: r.role as Role,
+    content: r.content,
+    grounded: r.grounded === 1,
+    citations: parseCitations(r.citations),
+    error: r.error === 1,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Persist one settled turn (a user question or a finished assistant answer). */
+export async function insertChatMessage(sessionId: string, message: ChatMessage): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO chat_messages (id, session_id, role, content, grounded, citations, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    message.id,
+    sessionId,
+    message.role,
+    message.content,
+    message.grounded ? 1 : 0,
+    JSON.stringify(message.citations),
+    message.error ? 1 : 0,
+    message.createdAt,
+  );
+}
+
+/** Delete a conversation and all of its turns. */
+export async function deleteChatSession(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM chat_messages WHERE session_id = ?', id);
+  await db.runAsync('DELETE FROM chat_sessions WHERE id = ?', id);
 }

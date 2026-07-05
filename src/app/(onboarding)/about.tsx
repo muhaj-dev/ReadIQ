@@ -13,9 +13,14 @@ import { fonts } from '@/constants/typography';
 import { useUserStore } from '@/store/use-user-store';
 
 const FIELDS = [
-  { key: 'name', label: 'Your name', placeholder: 'e.g. David Johnson' },
-  { key: 'studying', label: 'What are you studying?', placeholder: 'e.g. Computer Science' },
-  { key: 'goal', label: 'Your goal', placeholder: 'e.g. Pass my finals' },
+  { key: 'name', label: 'Your name', placeholder: 'e.g. David Johnson', required: true },
+  {
+    key: 'studying',
+    label: 'What are you studying?',
+    placeholder: 'e.g. Computer Science',
+    required: true,
+  },
+  { key: 'goal', label: 'Your goal', placeholder: 'e.g. Pass my finals', required: false },
 ] as const;
 
 type FieldKey = (typeof FIELDS)[number]['key'];
@@ -26,9 +31,13 @@ export default function AboutScreen() {
   const setProfile = useUserStore((s) => s.setProfile);
   const [form, setForm] = useState<Record<FieldKey, string>>({ name: '', studying: '', goal: '' });
 
+  // Name and course are required — the app greets students by name and personalizes
+  // around what they study, so we don't let them through blank.
+  const canContinue = form.name.trim().length > 0 && form.studying.trim().length > 0;
+
   const handleContinue = () => {
-    // Persist what they told us (empty fields are simply left blank), then move on.
-    setProfile({ name: form.name, studyingFor: form.studying, goal: form.goal });
+    if (!canContinue) return;
+    setProfile({ name: form.name.trim(), studyingFor: form.studying.trim(), goal: form.goal.trim() });
     router.push('/first-note');
   };
 
@@ -58,6 +67,7 @@ export default function AboutScreen() {
                 label={field.label}
                 placeholder={field.placeholder}
                 value={form[field.key]}
+                required={field.required}
                 onChangeText={(text) => setForm((prev) => ({ ...prev, [field.key]: text }))}
               />
             ))}
@@ -78,7 +88,12 @@ export default function AboutScreen() {
               onPress={() => router.back()}
               className="flex-1"
             />
-            <OnboardButton label="Continue" onPress={handleContinue} className="flex-[2]" />
+            <OnboardButton
+              label="Continue"
+              onPress={handleContinue}
+              disabled={!canContinue}
+              className="flex-[2]"
+            />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Colors } from '@/constants/theme';
+import { useChatStore } from '@/store/use-chat-store';
 import { useNotesStore } from '@/store/use-notes-store';
 import { useOnboardingStore } from '@/store/use-onboarding-store';
 import { useSubjectsStore } from '@/store/use-subjects-store';
@@ -53,15 +54,17 @@ export default function RootLayout() {
   const initSubjects = useSubjectsStore((s) => s.init);
   const initOnboarding = useOnboardingStore((s) => s.init);
   const initUser = useUserStore((s) => s.init);
+  const initChat = useChatStore((s) => s.init);
   const recordDailyActivity = useUserStore((s) => s.recordDailyActivity);
   useEffect(() => {
     initNotes();
     initSubjects();
     initOnboarding();
+    initChat();
     // Streak must be counted after the profile has loaded, or a first tick would
     // overwrite the persisted lastActiveDate before we've read it.
     initUser().then(recordDailyActivity);
-  }, [initNotes, initSubjects, initOnboarding, initUser, recordDailyActivity]);
+  }, [initNotes, initSubjects, initOnboarding, initChat, initUser, recordDailyActivity]);
 
   if (!fontsLoaded) return null;
 

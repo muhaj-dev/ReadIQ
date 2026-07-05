@@ -9,18 +9,23 @@ type Props = {
   value: string;
   placeholder: string;
   onChangeText: (text: string) => void;
+  /** Show an accent asterisk marking the field as required. */
+  required?: boolean;
 };
 
 /**
  * "Tell us about you" form field: label + soft-filled input that lifts to a
  * white background with an indigo border while focused (per the mockup).
  */
-export function LabeledInput({ label, value, placeholder, onChangeText }: Props) {
+export function LabeledInput({ label, value, placeholder, onChangeText, required }: Props) {
   const [focused, setFocused] = useState(false);
 
   return (
     <View className="gap-2">
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>
+        {label}
+        {required ? <Text style={styles.required}> *</Text> : null}
+      </Text>
       {/* TextInput is a Style Exception Rule component → styles, not className. */}
       <TextInput
         value={value}
@@ -41,6 +46,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: fonts.bodySemibold,
     color: Onboard.onSurface,
+  },
+  required: {
+    color: Onboard.primary,
   },
   input: {
     backgroundColor: Onboard.surfaceLow,

@@ -2,87 +2,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { fonts } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
+import { parseAnswer, type Leaf } from '@/lib/answer-blocks';
+import { withAlpha } from '@/lib/color';
 
-// Renders noteIQ's answer with the light structure the model is asked to produce
-// (see lib/chat.ts SYSTEM_PROMPT): short paragraphs, "- " bullets, "1." numbered
-// steps, "**Label:**" section lines, and inline **bold** key terms. It is a tiny,
-// forgiving markdown subset — enough to make a dense answer scannable, without a
-// heavy dependency. Partial/streaming markdown degrades gracefully to plain text.
-
-type Block =
-  | { kind: 'para'; text: string }
-  | { kind: 'label'; text: string }
-  | { kind: 'bullets'; items: string[] }
-  | { kind: 'ordered'; items: string[] };
-
-const BULLET_RE = /^\s*[-*•]\s+(.*)$/;
-const ORDERED_RE = /^\s*\d+[.)]\s+(.*)$/;
-const HEADING_RE = /^\s*#{1,6}\s+(.*)$/;
-// A whole line that is just "**Label:**" (or "**Label**") — a section header.
-const LABEL_RE = /^\*\*(.+?)\*\*:?$/;
-
-/** Group the answer's lines into paragraphs, bullet lists, numbered lists, and
- *  section-label lines. Blank lines and a change of kind flush the current run. */
-function parseBlocks(text: string): Block[] {
-  const blocks: Block[] = [];
-  let para: string[] = [];
-  let bullets: string[] = [];
-  let ordered: string[] = [];
-
-  const flushPara = () => {
-    if (para.length) blocks.push({ kind: 'para', text: para.join(' ') });
-    para = [];
-  };
-  const flushBullets = () => {
-    if (bullets.length) blocks.push({ kind: 'bullets', items: bullets });
-    bullets = [];
-  };
-  const flushOrdered = () => {
-    if (ordered.length) blocks.push({ kind: 'ordered', items: ordered });
-    ordered = [];
-  };
-  const flushAll = () => {
-    flushPara();
-    flushBullets();
-    flushOrdered();
-  };
-
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    if (!line) {
-      flushAll();
-      continue;
-    }
-
-    const bullet = line.match(BULLET_RE);
-    const number = line.match(ORDERED_RE);
-    const heading = line.match(HEADING_RE);
-    const label = line.match(LABEL_RE);
-
-    if (bullet) {
-      flushPara();
-      flushOrdered();
-      bullets.push(bullet[1].trim());
-    } else if (number) {
-      flushPara();
-      flushBullets();
-      ordered.push(number[1].trim());
-    } else if (heading) {
-      flushAll();
-      blocks.push({ kind: 'label', text: heading[1].trim() });
-    } else if (label) {
-      flushAll();
-      blocks.push({ kind: 'label', text: label[1].trim() });
-    } else {
-      flushBullets();
-      flushOrdered();
-      para.push(line);
-    }
-  }
-
-  flushAll();
-  return blocks;
-}
+// Renders noteIQ's answer from the parsed block structure (see lib/answer-blocks):
+// short paragraphs, "- " bullets, "1." numbered steps, "**Label:**" section cards,
+// and inline **bold** key terms. A section is drawn as a bordered inner card
+// (accent title + body) so a multi-part answer reads like the mock — intro
+// paragraph, one card per section, optional closing paragraph.
 
 /** Render a line's inline **bold** spans, leaving the rest as plain text. */
 function Inline({ text }: { text: string }) {
@@ -101,16 +28,66 @@ function Inline({ text }: { text: string }) {
   );
 }
 
+/** Render one leaf (paragraph, bullet list, or numbered list). Shared by the
+ *  top-level body and each section card so they format identically. */
+function LeafBlock({ block, textColor }: { block: Leaf; textColor: string }) {
+  const colors = useTheme();
+
+  if (block.kind === 'para') {
+    return (
+      <Text style={[styles.text, { color: textColor }]}>
+        <Inline text={block.text} />
+      </Text>
+    );
+  }
+
+  return (
+    <View className="gap-1.5">
+      {block.items.map((item, j) => (
+        <View key={j} className="flex-row gap-2">
+          <Text style={[styles.marker, { color: colors.primary }]}>
+            {block.kind === 'ordered' ? `${j + 1}.` : '•'}
+          </Text>
+          <Text style={[styles.text, styles.item, { color: textColor }]}>
+            <Inline text={item} />
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 type Props = { text: string };
 
 /** The formatted answer body used inside the AI chat bubble. */
 export function AnswerBody({ text }: Props) {
   const colors = useTheme();
-  const blocks = parseBlocks(text);
+  const blocks = parseAnswer(text);
 
   return (
     <View className="gap-2.5">
       {blocks.map((block, i) => {
+        if (block.kind === 'section') {
+          return (
+            <View
+              key={i}
+              className="gap-1.5 rounded-inner p-3"
+              style={{
+                backgroundColor: colors.surfaceLow,
+                borderWidth: 1,
+                borderColor: withAlpha(colors.outlineVariant, 0.6),
+              }}>
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+                <Inline text={block.title} />
+              </Text>
+              {block.body.map((leaf, j) => (
+                <LeafBlock key={j} block={leaf} textColor={colors.onSurfaceVariant} />
+              ))}
+            </View>
+          );
+        }
+
+        // A bare label with no body of its own — render it as a plain bold heading.
         if (block.kind === 'label') {
           return (
             <Text key={i} style={[styles.label, { color: colors.onSurface }]}>
@@ -119,28 +96,7 @@ export function AnswerBody({ text }: Props) {
           );
         }
 
-        if (block.kind === 'para') {
-          return (
-            <Text key={i} style={[styles.text, { color: colors.onSurface }]}>
-              <Inline text={block.text} />
-            </Text>
-          );
-        }
-
-        return (
-          <View key={i} className="gap-1.5">
-            {block.items.map((item, j) => (
-              <View key={j} className="flex-row gap-2">
-                <Text style={[styles.marker, { color: colors.primary }]}>
-                  {block.kind === 'ordered' ? `${j + 1}.` : '•'}
-                </Text>
-                <Text style={[styles.text, styles.item, { color: colors.onSurface }]}>
-                  <Inline text={item} />
-                </Text>
-              </View>
-            ))}
-          </View>
-        );
+        return <LeafBlock key={i} block={block} textColor={colors.onSurface} />;
       })}
     </View>
   );
@@ -164,6 +120,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     lineHeight: 22,
+    fontFamily: fonts.bodyBold,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: fonts.bodyBold,
   },
   bold: {

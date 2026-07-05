@@ -30,3 +30,17 @@ export type ChatMessage = {
   error?: boolean;
   createdAt: string;
 };
+
+/**
+ * A saved conversation, shown in the Ask history list. Each session persists to
+ * SQLite so a student can reopen a past chat. `preview` is the first question
+ * asked (the list subtitle); `messageCount` counts all turns in the thread.
+ */
+export type ChatSession = {
+  id: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
