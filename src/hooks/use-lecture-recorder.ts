@@ -8,11 +8,7 @@ import { useEffect, useState } from 'react';
 
 export type RecorderStatus = 'starting' | 'denied' | 'recording' | 'paused' | 'stopped';
 
-/**
- * Drives the Record Lecture screen: asks for the mic, starts recording
- * immediately, and keeps a simple elapsed-seconds timer. The captured audio is
- * transcribed through the BTL runtime in Phase 8 — for now it is discarded.
- */
+/** Drives the Record Lecture screen: mic permission, immediate record, elapsed-seconds timer. */
 export function useLectureRecorder() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [status, setStatus] = useState<RecorderStatus>('starting');
@@ -62,15 +58,16 @@ export function useLectureRecorder() {
     }
   };
 
-  /** Stop the recorder (both "discard" and "save" end here for now). */
-  const stop = async () => {
-    if (status !== 'recording' && status !== 'paused') return;
+  /** Stop the recorder and return the recorded file uri (null if nothing was captured). */
+  const stop = async (): Promise<string | null> => {
+    if (status !== 'recording' && status !== 'paused') return recorder.uri ?? null;
     setStatus('stopped');
     try {
       await recorder.stop();
     } catch {
       // Already stopped or never started — nothing to clean up.
     }
+    return recorder.uri ?? null;
   };
 
   return { status, seconds, toggle, stop };

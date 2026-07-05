@@ -15,9 +15,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** One voice in the picker: a play/check dot, the voice name, gender + Nigerian
- *  tags, and an "HD" badge for Enhanced-quality voices. Tap it to hear it and set
- *  it for that host. */
+/** One voice in the picker: play/check dot, name, tags, HD badge; tap to hear and choose. */
 export function VoiceOptionRow({ voice, selected, accent, onPress }: Props) {
   const colors = useTheme();
 

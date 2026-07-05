@@ -33,8 +33,7 @@ function HostChip({ speaker, role }: { speaker: 'A' | 'B'; role: string }) {
   );
 }
 
-/** The episode header: the "From your notes" eyebrow, the title, which note it
- *  was made from, the two hosts, and an honest banner when the note is thin. */
+/** Episode header: eyebrow, title, source note, hosts, and a thin-note banner. */
 export function EpisodeIntro({ title, noteTitle, coverage, onEditVoices }: Props) {
   const colors = useTheme();
 
@@ -69,9 +68,13 @@ export function EpisodeIntro({ title, noteTitle, coverage, onEditVoices }: Props
       {coverage === 'partial' ? (
         <View
           className="flex-row gap-2 rounded-inner p-3"
-          style={{ backgroundColor: withAlpha(colors.flame, 0.1) }}>
-          <AppIcon name="warning" size={18} color={colors.flame} />
-          <Text style={[styles.hint, { color: colors.onSurface }]}>
+          style={{
+            backgroundColor: withAlpha(colors.errorContainer, 0.4),
+            borderWidth: 1,
+            borderColor: withAlpha(colors.error, 0.1),
+          }}>
+          <AppIcon name="warning" size={18} color={colors.error} />
+          <Text style={[styles.hint, { color: colors.error }]}>
             This note is only a few lines so far — add more to it for a fuller episode.
           </Text>
         </View>

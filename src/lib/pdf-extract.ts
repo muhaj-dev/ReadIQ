@@ -1,21 +1,16 @@
-// PDF → text through the BTL runtime. An uploaded PDF is sent to a document-
-// capable model (see DEFAULT_DOC_MODEL) as an OpenAI-compatible `file` content
-// part; the runtime returns the readable text, which becomes the note's body so
-// the student reads/annotates it like any other note.
-//
-// Budget note: this spends BTL credits per upload, so callers should extract
-// once and persist the result (the note is saved to SQLite) — never re-extract.
+// PDF → text via BTL: the PDF is sent to a vision/document model as an `image_url`
+// data-URI content part — the shape proven working for gemini-2.5-flash in scan OCR.
+// (The OpenAI `file` part shape was silently dropped by the BTL gateway: it returned
+// an empty completion with prompt_tokens: 0, i.e. the PDF never reached the model.)
+// Its text becomes the note body. Extract once and persist (spends credits).
 
 import type { NoteAttachment } from '@/types/note';
 
 import { btlPost, DEFAULT_DOC_MODEL } from './btl';
 import { fileUriToDataUri, isPdf } from './files';
 
-// The runtime may return the assistant text a few different ways depending on
-// which upstream model served the request: a plain `message.content` string, an
-// array of content parts (vision/multimodal models), or the `/responses`-style
-// `output_text` / `output[].content[]`. We read all of them so a shape mismatch
-// never silently looks like "the PDF had no text".
+// The gateway returns text in several shapes depending on the upstream model —
+// read all of them so a shape mismatch doesn't look like "the PDF had no text".
 type ContentPart = { type?: string; text?: string };
 type ChatResponse = {
   choices?: { message?: { content?: string | ContentPart[] } }[];
@@ -44,14 +39,9 @@ const EXTRACT_PROMPT =
   'Preserve headings, lists, and paragraph breaks. Do not summarize, translate, ' +
   'add commentary, or wrap the output in markdown code fences. Return only the text.';
 
-/**
- * Pull the full text out of a single PDF attachment via the BTL runtime.
- * Resolves to the extracted text (may be empty if the model found none). Throws
- * a BtlError on a runtime failure, or a plain Error if the file can't be read —
- * callers map both to a calm message and let the student save without the text.
- */
+/** Extract a single PDF's full text via BTL (may be empty). Throws BtlError / Error. */
 export async function extractPdfText(attachment: NoteAttachment): Promise<string> {
-  // Force application/pdf — a cached file's blob type is unreliable on RN, and a
+  // Force application/pdf — a cached file's blob type is unreliable on RN and a
   // wrong type makes the runtime return no text (the "no content yet" bug).
   const dataUri = await fileUriToDataUri(attachment.uri, 'application/pdf');
   console.log(
@@ -72,7 +62,9 @@ export async function extractPdfText(attachment: NoteAttachment): Promise<string
         role: 'user',
         content: [
           { type: 'text', text: EXTRACT_PROMPT },
-          { type: 'file', file: { filename: attachment.name, file_data: dataUri } },
+          // Same proven content-part as scan OCR; the data-URI's application/pdf
+          // mime rides through so the gateway forwards it to Gemini as a document.
+          { type: 'image_url', image_url: { url: dataUri } },
         ],
       },
     ],
@@ -81,10 +73,8 @@ export async function extractPdfText(attachment: NoteAttachment): Promise<string
   const text = readContent(res);
   console.log('[pdf-extract] response text length:', text.length);
   if (!text) {
-    // The call succeeded but yielded no text — usually a request-shape/model
-    // mismatch or a gateway refusal, not a genuinely empty PDF. When empty there
-    // is no note content to leak, so log the FULL response (truncated) — this is
-    // where a "model doesn't support file input" style message shows up.
+    // Succeeded but empty — usually a shape/model mismatch. No note content to
+    // leak when empty, so log the raw response (truncated) to diagnose.
     console.warn(
       '[pdf-extract] EMPTY result. Raw response (truncated):',
       JSON.stringify(res).slice(0, 800),
@@ -93,11 +83,7 @@ export async function extractPdfText(attachment: NoteAttachment): Promise<string
   return text;
 }
 
-/**
- * Extract text from every PDF in a picked set and join it. Non-PDF attachments
- * are ignored here (they stay as plain attachments). Returns '' when there are
- * no PDFs, so the caller can skip the runtime call entirely.
- */
+/** Extract and join text from every PDF in a set (non-PDFs ignored); '' when none. */
 export async function extractPdfsText(attachments: NoteAttachment[]): Promise<string> {
   const pdfs = attachments.filter(isPdf);
   if (pdfs.length === 0) return '';

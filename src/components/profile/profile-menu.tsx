@@ -36,7 +36,7 @@ export function ProfileMenu({ items }: Props) {
             key={item.id}
             accessibilityRole="button"
             activeOpacity={0.7}
-            // Rows without an href (sessions, performance, …) land in later phases.
+            // Rows without an href aren't navigable yet.
             onPress={() => item.href && router.push(item.href)}
             className="flex-row items-center justify-between p-5"
             style={

@@ -1,11 +1,4 @@
-// The Ask chat store — the active conversation, the saved-session history, and
-// the one action that drives a grounded answer end to end (retrieve → stream →
-// cite). Conversations persist to SQLite so a student can reopen a past chat.
-//
-// Screens stay thin: the Ask screen renders `messages` and calls `send`; the
-// history screen renders `sessions` and calls `openSession` / `deleteSession`.
-// All the orchestration (optimistic bubbles, live token append, persistence,
-// fallback + friendly errors) lives here so the trust logic is in one place.
+// Ask chat store: active conversation + saved-session history + the grounded-answer flow (retrieve → stream → cite).
 
 import { create } from 'zustand';
 
@@ -33,8 +26,7 @@ function deriveTitle(question: string): string {
   return firstLine.length > 48 ? `${firstLine.slice(0, 47).trimEnd()}…` : firstLine;
 }
 
-// Last-resort copy for a non-BtlError throw (shouldn't happen — chat.ts only
-// throws BtlError — but never leak a raw stack trace to a stressed student).
+// Last-resort copy for a non-BtlError throw — never leak a raw stack trace.
 const GENERIC_ERROR = 'Something went wrong reaching your study assistant. Please try again.';
 
 type ChatState = {
@@ -53,8 +45,7 @@ type ChatState = {
   send: (question: string) => Promise<void>;
   /** Continue a cut-off answer ("Generate more") — appends the extra text. */
   generateMore: (messageId: string) => Promise<void>;
-  /** Opt-in: answer the same question from general knowledge, OUTSIDE the notes.
-   *  Adds a clearly-marked "Beyond your notes" reply (with References) below. */
+  /** Opt-in: answer from general knowledge, OUTSIDE the notes ("Beyond your notes"). */
   answerBeyond: (messageId: string) => Promise<void>;
   /** Start a fresh, empty conversation (the current one stays saved). */
   newChat: () => void;
@@ -87,8 +78,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const question = raw.trim();
     if (!question || get().sending) return;
 
-    // First message of a fresh chat → create (and persist) its session up front
-    // so it appears in history immediately, even mid-answer.
+    // First message of a fresh chat → create + persist its session up front, so it shows in history.
     let sessionId = get().activeSessionId;
     const startedAt = new Date().toISOString();
     if (!sessionId) {
@@ -102,8 +92,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
     }
 
-    // Show the question and an empty assistant bubble immediately; the bubble
-    // fills in as tokens stream (or flips to the fallback / error).
+    // Show the question + an empty assistant bubble immediately; it fills as tokens stream.
     const userMsg: ChatMessage = {
       id: createId(),
       role: 'user',
@@ -184,8 +173,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (sending) return;
     const idx = messages.findIndex((m) => m.id === messageId);
     const answer = messages[idx];
-    // The first answer is a short briefing, so "Generate more" is offered under any
-    // grounded reply — continue unless the notes have already been exhausted.
+    // "Generate more" is offered under any grounded reply — continue unless notes are exhausted.
     if (!answer || answer.role !== 'assistant' || !answer.grounded || answer.exhausted) return;
     // The question is the nearest preceding user turn.
     const question = messages
@@ -202,8 +190,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ sending: true });
     patch({ continuing: true });
     try {
-      // Buffered (not streamed live): the model may reply with the "nothing more"
-      // marker, which we must discard rather than flash on screen.
+      // Buffered, not streamed: the "nothing more" marker must be discarded, not flashed on screen.
       const result = await continueAnswer(question, answer.content);
       const merged =
         result.exhausted || !result.content
@@ -277,8 +264,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       patchBeyond(settled);
     } catch (err) {
       const friendly = err instanceof BtlError ? err.friendly : GENERIC_ERROR;
-      // An error bubble is no longer a "beyond" answer — clear the flag so it
-      // renders as a plain friendly error, not under the "Beyond your notes" header.
+      // An error bubble isn't a "beyond" answer — clear the flag so it renders as a plain error.
       settled = { ...beyondMsg, content: friendly, streaming: false, beyond: false, error: true };
       patchBeyond(settled);
     } finally {

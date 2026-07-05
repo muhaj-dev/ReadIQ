@@ -26,7 +26,7 @@ export const addMethods: AddMethod[] = [
   {
     key: 'upload',
     title: 'Upload PDF',
-    description: 'Upload a PDF or document',
+    description: 'PDF files only for now',
     icon: 'picture-as-pdf',
     tint: 'methodUpload',
     well: 'methodUploadWell',

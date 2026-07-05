@@ -8,10 +8,12 @@ import { useTheme } from '@/hooks/use-theme';
 type Props = {
   value: string;
   onChangeText: (text: string) => void;
+  /** Muted hint shown when there's no text yet (e.g. transcription found nothing). */
+  placeholder?: string;
 };
 
 /** "Extracted Text" section: heading + Edit toggle + the OCR text card. */
-export function ExtractedTextCard({ value, onChangeText }: Props) {
+export function ExtractedTextCard({ value, onChangeText, placeholder }: Props) {
   const colors = useTheme();
   const [editing, setEditing] = useState(false);
 
@@ -49,8 +51,10 @@ export function ExtractedTextCard({ value, onChangeText }: Props) {
             autoFocus
             style={[styles.body, styles.input, { color: colors.onSurface }]}
           />
-        ) : (
+        ) : value ? (
           <Text style={[styles.body, { color: colors.onSurface }]}>{value}</Text>
+        ) : (
+          <Text style={[styles.body, { color: colors.outlineVariant }]}>{placeholder ?? ''}</Text>
         )}
       </View>
     </View>
@@ -59,9 +63,10 @@ export function ExtractedTextCard({ value, onChangeText }: Props) {
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 24,
+    fontSize: 18,
     lineHeight: 32,
-    fontFamily: fonts.headingSemibold,
+    // Match the "Scan Result" page title family (AddHeader uses fonts.bodyBold).
+    fontFamily: fonts.bodyBold,
   },
   editLabel: {
     fontSize: 14,

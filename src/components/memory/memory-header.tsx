@@ -12,9 +12,7 @@ type Props = {
   onToggleSelect: () => void;
 };
 
-/** Memory Panel header: big title, a top-right select checkbox, and the
- *  "All Notes" scope row (see the mock). Tapping the checkbox turns the list
- *  into a multi-select list with a Share / Delete bar. */
+/** Memory Panel header: title, select checkbox, and "All Notes" scope row. */
 export function MemoryHeader({ selectMode, onToggleSelect }: Props) {
   const colors = useTheme();
 

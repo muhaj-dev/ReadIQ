@@ -4,9 +4,7 @@ import { fonts } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
 import { parseAnswer, type Leaf } from '@/lib/answer-blocks';
 
-// Renders noteIQ's answer from the parsed block structure (see lib/answer-blocks):
-// clear paragraphs, "**Heading:**" bold headings, "- " bullets, "1." numbered
-// steps, and inline **bold** key terms — a calm, readable study answer.
+// Renders noteIQ's answer from parsed blocks: paragraphs, headings, bullets, numbered steps, inline bold.
 
 /** Render a line's inline **bold** spans, leaving the rest as plain text. */
 function Inline({ text }: { text: string }) {
@@ -71,8 +69,7 @@ export function AnswerBody({ text }: Props) {
           );
         }
 
-        // A term + its definition → a highlighted card so the student sees the
-        // definition of each part up front, with explanation below (see mock).
+        // A term + its definition → a highlighted card.
         if (block.kind === 'definition') {
           return (
             <View
@@ -100,9 +97,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
   },
   item: {
-    // flexShrink (not flex:1) so the text still reports its full intrinsic width.
-    // The chat bubble is shrink-to-fit; flex:1 (flex-basis 0) would collapse it to
-    // the bullet marker's width and wrap the text one character per line.
+    // flexShrink (not flex:1) so shrink-to-fit bubbles don't collapse the text to one char per line.
     flexShrink: 1,
   },
   marker: {

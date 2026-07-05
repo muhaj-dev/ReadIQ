@@ -18,8 +18,7 @@ type Props = {
   onRestart: () => void;
 };
 
-/** The pinned player controls: a progress track, restart, a big play/pause, and
- *  the turn counter with the current host's name. */
+/** Pinned player controls: progress track, restart, play/pause, turn counter. */
 export function PodcastPlayerBar({
   playing,
   atEnd,

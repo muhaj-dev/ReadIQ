@@ -8,10 +8,7 @@ type Props = {
   onSelect: (index: number) => void;
 };
 
-/**
- * Colour swatch row. The selected swatch shows a surface-coloured gap and an
- * indigo ring around it (mock: border-4 border-surface + ring-primary-container).
- */
+/** Colour swatch row; the selected swatch gets a surface gap + indigo ring. */
 export function ColorRow({ selectedIndex, onSelect }: Props) {
   const colors = useTheme();
 

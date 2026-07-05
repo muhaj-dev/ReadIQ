@@ -6,8 +6,7 @@ import { fonts } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
 import { useChatStore } from '@/store/use-chat-store';
 
-/** Ask AI top bar: back chevron, centred title, and the new-chat + history
- *  actions that manage the saved conversation list (see the mock). */
+/** Ask AI top bar: back, title, and new-chat + history actions. */
 export function AskHeader() {
   const colors = useTheme();
   const router = useRouter();
@@ -31,8 +30,7 @@ export function AskHeader() {
       <Text className="flex-1 text-center" style={[styles.title, { color: colors.onSurface }]}>
         Ask AI
       </Text>
-      {/* New chat clears the thread (the old one stays saved in history). It is
-          disabled on an already-empty chat so it never no-ops confusingly. */}
+      {/* New chat clears the thread (old one stays in history); disabled when already empty. */}
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel="New chat"

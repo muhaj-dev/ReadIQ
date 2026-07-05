@@ -9,10 +9,7 @@ type Props = {
   onComplete: () => void;
 };
 
-/**
- * Splash footer — the loading bar fades in at the bottom once the logo has
- * settled, fills for ~1s (purely an intro animation), then advances.
- */
+/** Splash footer — the loading bar fades in, fills ~1s, then advances. */
 export function SplashFooter({ durationMs = 1000, onComplete }: Props) {
   return (
     <Animated.View entering={FadeIn.duration(300)} className="absolute bottom-16 items-center">

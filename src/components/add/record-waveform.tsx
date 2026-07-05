@@ -12,8 +12,7 @@ type Props = {
   active: boolean;
 };
 
-/** The animated mock waveform with its soft glow (see the record mock). Real
- *  level metering can replace the random heights when transcription lands. */
+/** Animated mock waveform with soft glow (random heights until real metering). */
 export function RecordWaveform({ active }: Props) {
   const colors = useTheme();
   const [heights, setHeights] = useState(randomHeights);

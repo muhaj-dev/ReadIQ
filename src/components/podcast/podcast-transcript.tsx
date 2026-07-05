@@ -13,8 +13,7 @@ type Props = {
   header: ReactNode;
 };
 
-/** The scrollable conversation. Records each turn's offset and gently scrolls the
- *  active one into view as the read-along advances, so the student stays hands-free. */
+/** Scrollable conversation; auto-scrolls the active turn into view as it advances. */
 export function PodcastTranscript({ turns, activeIndex, onSeek, header }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const offsets = useRef<number[]>([]);

@@ -7,17 +7,26 @@ import { useTheme } from '@/hooks/use-theme';
 type Props = {
   date: string;
   time: string;
+  onDatePress: () => void;
+  onTimePress: () => void;
 };
 
-function PickerBox({ value, icon }: { value: string; icon: AppIconName }) {
+function PickerBox({
+  value,
+  icon,
+  onPress,
+}: {
+  value: string;
+  icon: AppIconName;
+  onPress: () => void;
+}) {
   const colors = useTheme();
 
-  // Native date/time pickers arrive with the store pass — the boxes are
-  // visual-only for now, like the mock's readonly inputs.
   return (
     <TouchableOpacity
       accessibilityRole="button"
       activeOpacity={0.7}
+      onPress={onPress}
       className="h-12 flex-1 flex-row items-center justify-between rounded-lg px-4"
       style={[styles.box, { backgroundColor: colors.surfaceLowest, shadowColor: colors.shadow }]}>
       <Text style={[styles.value, { color: colors.onSurface }]}>{value}</Text>
@@ -26,12 +35,12 @@ function PickerBox({ value, icon }: { value: string; icon: AppIconName }) {
   );
 }
 
-/** Due Date row: date box + time box side by side. */
-export function DateTimeRow({ date, time }: Props) {
+/** Due Date row: tappable date box + time box side by side (each opens a sheet). */
+export function DateTimeRow({ date, time, onDatePress, onTimePress }: Props) {
   return (
     <View className="flex-row gap-3">
-      <PickerBox value={date} icon="calendar-month" />
-      <PickerBox value={time} icon="schedule" />
+      <PickerBox value={date} icon="calendar-month" onPress={onDatePress} />
+      <PickerBox value={time} icon="schedule" onPress={onTimePress} />
     </View>
   );
 }

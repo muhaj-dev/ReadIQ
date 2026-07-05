@@ -1,6 +1,4 @@
-// The user store — the student's profile plus the real study metrics the
-// Dashboard and Profile read (streak + grounded-answer count). Persisted whole
-// to AsyncStorage: one small record, lightweight, per AGENTS.md.
+// User store: profile + study metrics (streak, AI-answer count), persisted to AsyncStorage.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -12,6 +10,7 @@ const STORAGE_KEY = 'user_profile';
 
 const EMPTY: UserProfile = {
   name: '',
+  email: '',
   studyingFor: '',
   goal: '',
   streak: 0,
@@ -70,6 +69,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     const next: UserProfile = {
       ...current,
       name: fields.name?.trim() ?? current.name,
+      email: fields.email?.trim() ?? current.email,
       studyingFor: fields.studyingFor?.trim() ?? current.studyingFor,
       goal: fields.goal?.trim() ?? current.goal,
       // Guarantee an anchor even if onboarding runs before init stamped one.

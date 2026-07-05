@@ -1,8 +1,5 @@
-// Pure study-metric helpers — no React, no storage — so they're trivial to unit
-// test and reuse. The user store owns the state; these compute the transitions.
-
-/** A standard university term, in weeks — the denominator for semester progress. */
-export const SEMESTER_WEEKS = 16;
+// Pure streak helpers — no React, no storage. The user store owns the state;
+// these compute the day-streak transitions.
 
 const DAY_MS = 86_400_000;
 
@@ -21,11 +18,8 @@ export function dayDiff(fromKey: string, toKey: string): number {
   return Math.round((to - from) / DAY_MS);
 }
 
-/**
- * The streak after a day of activity. Same day → unchanged; the very next day →
- * +1; any longer gap (or a first-ever visit) resets to 1. Returns null when the
- * student has already been counted today, so callers can skip a needless write.
- */
+/** Streak after a day's activity: next day → +1, longer gap or first visit → 1.
+ *  Returns null when already counted today (caller skips the write). */
 export function nextStreak(
   prev: { streak: number; lastActiveDate: string | null },
   today: string = todayKey(),
@@ -35,31 +29,4 @@ export function nextStreak(
   const gap = dayDiff(prev.lastActiveDate, today);
   const streak = gap === 1 ? prev.streak + 1 : 1;
   return { streak, lastActiveDate: today };
-}
-
-export type SemesterProgress = {
-  percent: number;
-  weeksDone: number;
-  weeksTotal: number;
-  encouragement: string;
-};
-
-function encourage(percent: number): string {
-  if (percent <= 0) return "Let's get started!";
-  if (percent < 34) return 'Off to a great start!';
-  if (percent < 67) return 'Keep the momentum!';
-  if (percent < 100) return 'Almost there!';
-  return 'You made it! 🎉';
-}
-
-/**
- * How far into the term the student is, measured honestly from their first
- * launch over a {@link SEMESTER_WEEKS}-week term. A brand-new account reads 0%.
- */
-export function deriveSemester(createdAt: string, now: number = Date.now()): SemesterProgress {
-  const start = createdAt ? new Date(createdAt).getTime() : now;
-  const elapsed = Number.isFinite(start) ? Math.floor((now - start) / (7 * DAY_MS)) : 0;
-  const weeksDone = Math.max(0, Math.min(SEMESTER_WEEKS, elapsed));
-  const percent = Math.round((weeksDone / SEMESTER_WEEKS) * 100);
-  return { percent, weeksDone, weeksTotal: SEMESTER_WEEKS, encouragement: encourage(percent) };
 }

@@ -1,10 +1,6 @@
-// Structured view of note HTML for the Note Reader. Unlike the plain-text
-// projection used for grounding (htmlToPlainText), this PRESERVES formatting —
-// bold / italic / underline / strike / highlight inline, heading levels, lists,
-// quotes, code, and inline images — so the reader shows the note exactly as the
-// student wrote it. TenTap/TipTap is the only producer of this HTML, so the
-// parser targets its clean, predictable output rather than being a general HTML
-// engine.
+// Structured view of note HTML for the Note Reader — PRESERVES formatting (marks,
+// headings, lists, quotes, code, images). Targets TenTap/TipTap's clean output,
+// not general HTML.
 
 import { decodeEntities } from './rich-text';
 
@@ -46,8 +42,7 @@ export function htmlToRichBlocks(html: string): RichBlock[] {
   const blocks: RichBlock[] = [];
   const marks: InlineMark[] = []; // active inline marks (a stack, may nest)
   const lists: { ordered: boolean; count: number }[] = [];
-  // Held in an object so TypeScript keeps the declared union type at reads — a
-  // plain closure-mutated `let` gets narrowed to its initializer (`null`).
+  // Boxed in an object so TS keeps the union type — a closure-mutated `let` narrows to `null`.
   const open: { block: SpanBlock | null } = { block: null };
   let quoteDepth = 0;
   let inPre = false;

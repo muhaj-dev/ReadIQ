@@ -28,8 +28,7 @@ export function LoadingBar({ duration = 1000, onComplete, width = 80 }: Props) {
 
   const fillStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
-  // Layout via NativeWind; the animated width and colours stay in style
-  // (Animated values are a Style Exception Rule, `width` is a runtime prop).
+  // Animated width + colours stay inline (Style Exception Rule).
   return (
     <View
       className="h-1 overflow-hidden rounded-pill"

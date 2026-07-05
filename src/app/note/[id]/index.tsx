@@ -16,8 +16,7 @@ import { fonts } from '@/constants/typography';
 import { useNoteDetail } from '@/data/note-detail';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Note Details — opened from a Memory card. Reads the note live from the
- *  Memory store so edits made on the Edit screen show here immediately. */
+/** Note Details — reads the note live from the Memory store so edits show immediately. */
 export default function NoteDetailScreen() {
   const colors = useTheme();
   const router = useRouter();

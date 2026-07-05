@@ -1,16 +1,6 @@
-// Grounded Ask ★ — the star feature. Answers come ONLY from the student's own
-// retrieved notes, and every grounded answer carries the source notes as
-// citations (the "📌 From your notes" tags).
-//
-// The flow (see AGENTS.md → Retrieval & Grounding Rules):
-//   1. retrieve the top note chunks for the question (lexical — lib/retrieval)
-//   2. if NOTHING clears the gate → return the honest fallback WITHOUT calling the
-//      model (this saves BTL credits and is the trust promise in action)
-//   3. otherwise stream the answer with the retrieved chunks as the SOLE context
-//   4. return the source notes as citations
-//
-// The model is also told to decline when the chunks don't actually answer; if it
-// does, we drop the citations so a non-answer is never tagged as "from your notes".
+// Grounded Ask ★ — answers ONLY from retrieved notes, gated: no hit → honest
+// fallback, no model call. Grounded answers carry source citations; a declined
+// answer drops its citations so a non-answer is never tagged "from your notes".
 
 import { useNotesStore } from '@/store/use-notes-store';
 import type { Citation } from '@/types/chat';
@@ -19,36 +9,25 @@ import type { RetrievalHit } from '@/types/retrieval';
 import { btlChatStream, btlPost, BtlError, DEFAULT_CHAT_MODEL } from './btl';
 import { retrieveTopK } from './retrieval';
 
-/** The exact sentence the model is told to use — and the fallback we show — when
- *  the notes don't cover the question. Kept identical everywhere so we can detect
- *  a declined answer and strip its citations. */
+/** The decline sentence — used identically as prompt instruction, fallback, and detector. */
 export const NOT_IN_NOTES = "I don't have that in your notes yet.";
 
 /** Shown when the student hasn't saved a single note yet (nudge to add one). */
 export const NO_NOTES_YET =
   "You haven't saved any notes yet. Add your first note and I'll answer straight from it.";
 
-/** The marker the model replies with on "Generate more" when the notes hold
- *  nothing further — lets the UI retire the button instead of looping. */
+/** Model's "nothing further" marker on "Generate more" — lets the UI retire the button. */
 const NOTHING_MORE = 'NOTHING_MORE';
 
-/** How many note chunks feed the answer. Wider than a one-line lookup so a full
- *  "explain this topic" question has enough grounded material to answer in depth
- *  (the relative gate in retrieval still drops weakly-related chunks). */
+/** How many note chunks feed the answer. */
 const RETRIEVE_K = 8;
-/** Output ceiling ≈ 500 words. The first answer is deliberately a short, focused
- *  study briefing (summary + what to revise) — not a wall of text that bores a
- *  tired student. The deeper detail is pulled in on demand via "Generate more". */
+/** Output ceiling (~500 words) — first answer is a short study briefing. */
 const ANSWER_MAX_TOKENS = 700;
-/** How much SOURCE text (across all matched notes) we hand the model, in chars
- *  (~5k tokens). Retrieval finds the relevant notes; we then feed their FULL
- *  content — the extracted PDF / file text lives in the note body — so the answer
- *  is drawn from the whole note, not just the few chunks that matched. Best-
- *  matching notes fill the budget first; an over-long note is clipped, not dropped. */
+/** Source-text budget in chars (~5k tokens); feeds full note bodies, best-first, clipped. */
 const CONTEXT_CHAR_BUDGET = 20000;
 
 const SYSTEM_PROMPT =
-  'You are noteIQ, a calm university study companion. Answer the student\'s ' +
+  'You are readIQ, a calm university study companion. Answer the student\'s ' +
   'question using ONLY the numbered notes provided below. If the notes do not ' +
   `contain the answer, reply exactly: "${NOT_IN_NOTES}" and nothing else. Never ` +
   'use outside knowledge and never invent facts.\n\n' +
@@ -83,8 +62,7 @@ export type AskResult = {
   grounded: boolean;
   content: string;
   citations: Citation[];
-  /** The model hit the length cap mid-answer — there is more it could say, so the
-   *  UI offers "Generate more". Never true for a fallback or a declined answer. */
+  /** Hit the length cap mid-answer — UI offers "Generate more". */
   truncated: boolean;
 };
 
@@ -95,22 +73,14 @@ type ChatCompletion = {
 /** A generated answer plus whether it was cut off at the token cap. */
 type Answer = { content: string; truncated: boolean };
 
-/** Rough token count of an answer, for the non-streaming fallback (which carries
- *  no per-delta count). Estimates from words (~0.75 words/token) and chars (~4
- *  chars/token), taking the larger — biasing toward detecting a cut-off. */
+/** Rough token count (words vs chars, larger) for the non-streaming fallback. */
 function estimateTokens(text: string): number {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(Math.ceil(words / 0.75), Math.ceil(text.length / 4));
 }
 
-/**
- * Was the answer cut off at the length cap? btl-2 mislabels `finish_reason` as
- * 'stop' even when it stops at `max_tokens` (verified live), so we can't trust it
- * alone. On the streaming path we pass the emitted token count (~1 per delta),
- * which lands right at the cap on a real cut-off; the non-streaming fallback has
- * no such count, so it falls back to a length estimate. A rare false positive is
- * harmless — "Generate more" then gets the "nothing more" reply and retires.
- */
+/** Was the answer cut off at the cap? btl-2 mislabels `finish_reason`, so also
+ *  check emitted `tokens` (streaming) or a length estimate (non-streaming). */
 function isTruncated(text: string, finishReason: string | null, tokens?: number): boolean {
   if (finishReason === 'length') return true;
   // Emitted tokens landing within a few of the cap ⇒ the model was still going.
@@ -120,14 +90,7 @@ function isTruncated(text: string, finishReason: string | null, tokens?: number)
 
 type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string };
 
-/**
- * The grounded context handed to the model: each unique matched note's FULL
- * content (best match first), numbered so citations line up. Retrieval located the
- * relevant notes; here we widen from the matched chunks to the whole note body —
- * which already contains any extracted PDF / uploaded-file text — so the answer can
- * be complete. Content is clipped to {@link CONTEXT_CHAR_BUDGET} best-first; the
- * matched chunk is used as a fallback if a note somehow isn't in the store.
- */
+/** Numbered grounded context: each matched note's full body, best-first, clipped to budget. */
 function buildContext(hits: RetrievalHit[]): string {
   const byId = new Map(useNotesStore.getState().notes.map((n) => [n.id, n]));
   const parts: string[] = [];
@@ -156,23 +119,13 @@ function chatRequest(messages: ChatMsg[]): Record<string, unknown> {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** A transient runtime failure worth retrying (a 5xx gateway hiccup or a dropped
- *  connection) — as opposed to auth / credits / not-configured, which won't fix
- *  themselves on a retry. */
+/** A transient failure worth retrying (5xx or dropped connection), unlike auth/credits. */
 function isTransient(err: unknown): err is BtlError {
   return err instanceof BtlError && (err.kind === 'server' || err.kind === 'network');
 }
 
-/**
- * Get the answer text for a prepared chat request, resilient to the BTL runtime's
- * intermittent streaming 500s.
- *
- * Attempt 1 streams (the hero moment — the answer types itself out). If that fails
- * transiently BEFORE any token arrives, fall back to a normal non-streaming
- * completion, which the gateway serves far more reliably; the whole answer then
- * appears at once after the typing indicator. Once tokens have streamed we never
- * retry (it would duplicate them) — the error surfaces instead.
- */
+/** Answer a prepared request: attempt 1 streams; a pre-token transient failure
+ *  falls back to a non-streaming completion. Never retries once tokens streamed. */
 async function generateAnswer(
   request: Record<string, unknown>,
   onToken: ((delta: string) => void) | undefined,
@@ -220,13 +173,7 @@ function toCitations(hits: RetrievalHit[]): Citation[] {
   return citations;
 }
 
-/**
- * Answer a question strictly from the student's saved notes.
- *
- * `onToken` receives each streamed delta so the UI can type the answer out live;
- * `signal` cancels an in-flight stream. Resolves to an {@link AskResult}; throws a
- * BtlError only on a runtime failure (the caller shows `.friendly`).
- */
+/** Answer a question strictly from saved notes. `onToken` streams deltas; throws BtlError on failure. */
 export async function askFromNotes(
   question: string,
   opts: { onToken?: (delta: string) => void; signal?: AbortSignal } = {},
@@ -247,8 +194,7 @@ export async function askFromNotes(
     { role: 'user', content: `Notes:\n${buildContext(hits)}\n\nQuestion: ${q}` },
   ]);
   const { content, truncated } = await generateAnswer(request, opts.onToken, opts.signal);
-  // Honour the model declining: an empty or "not in your notes" reply is NOT
-  // grounded, so we show no source tags (and no "Generate more") under it.
+  // A declined ("not in your notes") reply isn't grounded: no tags, no "Generate more".
   const declined = content.toLowerCase().startsWith("i don't have that in your notes");
   if (!content || declined) {
     return { grounded: false, content: content || NOT_IN_NOTES, citations: [], truncated: false };
@@ -262,13 +208,8 @@ export type ContinueResult = AskResult & {
   exhausted: boolean;
 };
 
-/**
- * Continue a grounded answer that was cut off at the length cap — powers
- * "Generate more". Re-retrieves the same notes and asks the model to carry on
- * strictly from them WITHOUT repeating what it already wrote. Resolves with only
- * the new text (empty + `exhausted` when there is nothing left to add). Throws a
- * BtlError on a runtime failure, exactly like {@link askFromNotes}.
- */
+/** Continue a cut-off grounded answer ("Generate more"): carries on from the same
+ *  notes without repeating; empty + `exhausted` when nothing's left. Throws BtlError. */
 export async function continueAnswer(
   question: string,
   priorAnswer: string,
@@ -305,7 +246,7 @@ export async function continueAnswer(
 }
 
 const BEYOND_SYSTEM_PROMPT =
-  'You are noteIQ, a helpful university study companion. The student has explicitly ' +
+  'You are readIQ, a helpful university study companion. The student has explicitly ' +
   'asked for help BEYOND their saved notes, so answer from your own general ' +
   'knowledge.\n\n' +
   'Keep it SHORT and precise — a quick, easy-to-read explanation the student can ' +
@@ -323,18 +264,10 @@ const BEYOND_SYSTEM_PROMPT =
   'sources you are genuinely confident exist — never fabricate specific citations, ' +
   'authors, page numbers, or URLs.';
 
-/** A general-knowledge answer for the opt-in "answer from outside your notes" path.
- *  Not grounded in the student's notes — the UI marks it clearly as such and shows
- *  the References the model listed. */
+/** A general-knowledge answer for the opt-in "beyond your notes" path — not grounded. */
 export type BeyondResult = { content: string; truncated: boolean };
 
-/**
- * Answer a question from the model's GENERAL KNOWLEDGE, outside the student's
- * notes — only ever called when the student explicitly opts in. The answer ends
- * with a References section and is rendered under a distinct "Beyond your notes"
- * header so the "From your notes" trust promise is never diluted. Throws a
- * BtlError on a runtime failure, like {@link askFromNotes}.
- */
+/** Answer from general knowledge (opt-in only), ending with References. Throws BtlError. */
 export async function answerBeyondNotes(
   question: string,
   opts: { onToken?: (delta: string) => void; signal?: AbortSignal } = {},

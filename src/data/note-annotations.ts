@@ -1,9 +1,4 @@
-// Reader-annotation state + persistence for the Note Reader. Holds the current
-// tool (view / highlight / comment), the highlight colour, the comment being
-// written or viewed, an undo/redo history, and writes every change back to the
-// Memory store. The WebView owns the DOM; this hook owns the saved shape. Kept
-// out of the screen so the reader screen only composes UI (see AGENTS.md →
-// file-length rules).
+// Reader-annotation state + persistence: tool, highlight colour, comments, undo/redo, saved to the Memory store.
 
 import { useCallback, useRef, useState } from 'react';
 
@@ -15,9 +10,7 @@ import type { NoteComment } from '@/types/note';
 /** The active reading tool. `view` = plain reading (text still selectable). */
 export type AnnotationMode = 'view' | 'highlight' | 'comment';
 
-/** A fresh comment selection whose body the student is still typing. Its anchor
- *  `<mark data-cid>` already exists in the WebView DOM (captured in `html`); that
- *  data-cid is reused as the comment's id, so both stay in sync. */
+/** A new comment selection being typed; its `<mark data-cid>` (in `html`) doubles as the comment id. */
 export type CommentDraft = { cid: string; quote: string; html: string };
 
 /** One point on the undo timeline: the reader HTML + comment list at that step. */
@@ -32,21 +25,17 @@ function sameComments(a: NoteComment[], b: NoteComment[]): boolean {
 export function useNoteAnnotations(note: NoteDetail) {
   const updateNote = useNotesStore((s) => s.updateNote);
 
-  // The WebView renders this HTML once; never fed back, or the page would reset
-  // mid-read. Later highlights/comments mutate the DOM and report new HTML.
+  // Rendered once; never fed back or the page would reset mid-read. Later edits report new HTML.
   const initialHtml = useRef(note.readerHtml).current;
 
-  // Refs mirror state so async persistence always saves a consistent html+comments
-  // pair regardless of React batching.
+  // Refs mirror state so async saves keep a consistent html+comments pair despite React batching.
   const htmlRef = useRef(note.readerHtml);
   const commentsRef = useRef<NoteComment[]>(note.comments);
 
-  // Undo/redo timeline. `past`/`future` hold snapshots; the state flags drive the
-  // enabled/disabled look of the history buttons.
+  // Undo/redo timeline: past/future snapshots; the flags drive the history buttons' look.
   const pastRef = useRef<Snapshot[]>([]);
   const futureRef = useRef<Snapshot[]>([]);
-  // A delete waiting on the WebView to unwrap its mark, so the mark removal and
-  // the comment removal commit together as ONE undo step (see onChangeHtml).
+  // A delete awaiting the WebView unwrap, so mark + comment removal commit as one undo step.
   const pendingDeleteRef = useRef<string | null>(null);
 
   const [comments, setComments] = useState<NoteComment[]>(note.comments);
@@ -73,8 +62,7 @@ export function useNoteAnnotations(note: NoteDetail) {
     [note.id, updateNote],
   );
 
-  // A user-driven change: record the pre-change state on the undo stack (only if
-  // something actually changed), drop the redo stack, then write the new state.
+  // A user change: push the pre-change state to undo (if changed), clear redo, write the new state.
   const persist = useCallback(
     (html: string, next: NoteComment[]) => {
       if (html !== htmlRef.current || !sameComments(next, commentsRef.current)) {
@@ -89,8 +77,7 @@ export function useNoteAnnotations(note: NoteDetail) {
 
   // ── WebView message handlers ──────────────────────────────────────────────
 
-  /** A highlight was added/removed, OR a pending comment delete's mark just came
-   *  out. Fold a pending delete in here so mark + body vanish as one undo step. */
+  /** Highlight changed, or a pending comment-delete's mark came out — fold the delete in as one undo step. */
   const onChangeHtml = useCallback(
     (html: string) => {
       const pending = pendingDeleteRef.current;
@@ -129,8 +116,7 @@ export function useNoteAnnotations(note: NoteDetail) {
     [draft, persist],
   );
 
-  /** Cancel a new comment. Returns the anchor's cid so the screen can unwrap it
-   *  in the WebView (that unwrap fires a change event which persists clean HTML). */
+  /** Cancel a new comment; returns its cid so the screen can unwrap the mark in the WebView. */
   const discardDraft = useCallback((): string | null => {
     const cid = draft?.cid ?? null;
     setDraft(null);
@@ -149,8 +135,7 @@ export function useNoteAnnotations(note: NoteDetail) {
     [persist],
   );
 
-  /** Remove a comment. Marks it pending and closes the sheet; the screen then
-   *  unwraps its mark, and onChangeHtml commits both together (one undo step). */
+  /** Remove a comment: mark pending + close; the mark unwrap commits both as one undo step. */
   const removeComment = useCallback((id: string) => {
     pendingDeleteRef.current = id;
     setOpenId(null);
@@ -160,8 +145,7 @@ export function useNoteAnnotations(note: NoteDetail) {
 
   // ── Undo / redo ───────────────────────────────────────────────────────────
 
-  /** Step back one change. Returns the HTML the screen must push into the
-   *  WebView, or null when there's nothing to undo. */
+  /** Step back one change; returns the HTML to push into the WebView, or null. */
   const undo = useCallback((): string | null => {
     const prev = pastRef.current.pop();
     if (!prev) return null;

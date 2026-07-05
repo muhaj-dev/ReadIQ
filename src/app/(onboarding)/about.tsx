@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View, type TextInputProps } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,10 +10,28 @@ import { OnboardIcon } from '@/components/onboarding/onboard-icon';
 import { ProgressHeader } from '@/components/onboarding/progress-header';
 import { Onboard } from '@/constants/theme';
 import { fonts } from '@/constants/typography';
+import { isEmail } from '@/lib/validation';
 import { useUserStore } from '@/store/use-user-store';
 
-const FIELDS = [
+type Field = {
+  key: 'name' | 'email' | 'studying' | 'goal';
+  label: string;
+  placeholder: string;
+  required: boolean;
+  keyboardType?: TextInputProps['keyboardType'];
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+};
+
+const FIELDS: Field[] = [
   { key: 'name', label: 'Your name', placeholder: 'e.g. David Johnson', required: true },
+  {
+    key: 'email',
+    label: 'Email',
+    placeholder: 'e.g. you@university.edu',
+    required: true,
+    keyboardType: 'email-address',
+    autoCapitalize: 'none',
+  },
   {
     key: 'studying',
     label: 'What are you studying?',
@@ -21,23 +39,33 @@ const FIELDS = [
     required: true,
   },
   { key: 'goal', label: 'Your goal', placeholder: 'e.g. Pass my finals', required: false },
-] as const;
+];
 
-type FieldKey = (typeof FIELDS)[number]['key'];
+type FieldKey = Field['key'];
 
-/** Onboarding 2/3 — name, course, and goal, saved to the user store. */
+/** Onboarding 2/3 — name, email, course, and goal, saved to the user store. */
 export default function AboutScreen() {
   const router = useRouter();
   const setProfile = useUserStore((s) => s.setProfile);
-  const [form, setForm] = useState<Record<FieldKey, string>>({ name: '', studying: '', goal: '' });
+  const [form, setForm] = useState<Record<FieldKey, string>>({
+    name: '',
+    email: '',
+    studying: '',
+    goal: '',
+  });
 
-  // Name and course are required — the app greets students by name and personalizes
-  // around what they study, so we don't let them through blank.
-  const canContinue = form.name.trim().length > 0 && form.studying.trim().length > 0;
+  // Name, a valid email, and course required — we greet by name and personalize around the course.
+  const canContinue =
+    form.name.trim().length > 0 && isEmail(form.email) && form.studying.trim().length > 0;
 
   const handleContinue = () => {
     if (!canContinue) return;
-    setProfile({ name: form.name.trim(), studyingFor: form.studying.trim(), goal: form.goal.trim() });
+    setProfile({
+      name: form.name.trim(),
+      email: form.email.trim(),
+      studyingFor: form.studying.trim(),
+      goal: form.goal.trim(),
+    });
     router.push('/first-note');
   };
 
@@ -68,6 +96,8 @@ export default function AboutScreen() {
                 placeholder={field.placeholder}
                 value={form[field.key]}
                 required={field.required}
+                keyboardType={field.keyboardType}
+                autoCapitalize={field.autoCapitalize}
                 onChangeText={(text) => setForm((prev) => ({ ...prev, [field.key]: text }))}
               />
             ))}

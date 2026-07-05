@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ColorRow } from '@/components/deadlines/color-row';
@@ -11,28 +11,57 @@ import { FormHeader } from '@/components/form/form-header';
 import { FormInput } from '@/components/form/form-input';
 import { OptionSheet } from '@/components/form/option-sheet';
 import { SelectRow } from '@/components/form/select-row';
-import { initialDraft, pickerOptions } from '@/data/deadlines';
+import { createEmptyDraft } from '@/data/deadlines';
+import { type DeadlineSheetKey, sheetFor } from '@/lib/deadline-form';
+import { combineDue, formatDateLabel, formatTimeLabel, toDateValue } from '@/lib/deadline-view';
 import { useTheme } from '@/hooks/use-theme';
+import { useDeadlinesStore } from '@/store/use-deadlines-store';
 
-type SheetKey = keyof typeof pickerOptions;
-
-/** ADD DEADLINE — form per the mock. Saving persists once useDeadlinesStore lands. */
+/** ADD DEADLINE — form per the mock. Saving persists a real deadline to SQLite. */
 export default function AddDeadlineScreen() {
   const colors = useTheme();
   const router = useRouter();
-  const [draft, setDraft] = useState(initialDraft);
-  const [sheet, setSheet] = useState<SheetKey | null>(null);
+  const addDeadline = useDeadlinesStore((s) => s.addDeadline);
+
+  // Default the due date to tomorrow, derived from the real clock.
+  const tomorrow = useMemo(() => {
+    const now = new Date();
+    return toDateValue(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  }, []);
+  const [draft, setDraft] = useState(() => createEmptyDraft(tomorrow));
+  const [sheet, setSheet] = useState<DeadlineSheetKey | null>(null);
 
   const set = <K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
   const close = () => (router.canGoBack() ? router.back() : router.navigate('/deadlines'));
 
+  const save = async () => {
+    if (!draft.title.trim()) {
+      Alert.alert('Add a title', 'Give your deadline a name so you can recognise it.');
+      return;
+    }
+    await addDeadline({
+      title: draft.title,
+      subject: draft.subject,
+      type: draft.type,
+      dueDate: combineDue(draft.dateValue, draft.timeValue),
+      reminderOn: draft.reminder !== 'No reminder',
+      reminderLabel: draft.reminder,
+      repeat: draft.repeat,
+      notes: draft.notes,
+      colorIndex: draft.colorIndex,
+    });
+    close();
+  };
+
+  const config = sheetFor(sheet, draft);
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
-        <FormHeader title="Add Deadline" onBack={close} onSave={close} />
+        <FormHeader title="Add Deadline" onBack={close} onSave={save} />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -52,7 +81,12 @@ export default function AddDeadlineScreen() {
           </FormField>
 
           <FormField label="Due Date">
-            <DateTimeRow date={draft.date} time={draft.time} />
+            <DateTimeRow
+              date={formatDateLabel(draft.dateValue)}
+              time={formatTimeLabel(draft.timeValue)}
+              onDatePress={() => setSheet('date')}
+              onTimePress={() => setSheet('time')}
+            />
           </FormField>
 
           <FormField label="Reminder">
@@ -77,10 +111,10 @@ export default function AddDeadlineScreen() {
 
       <OptionSheet
         visible={sheet !== null}
-        options={sheet ? pickerOptions[sheet] : []}
-        selected={sheet ? draft[sheet] : ''}
+        options={config.options}
+        selected={config.selected}
         onSelect={(label) => {
-          if (sheet) set(sheet, label);
+          setDraft((d) => ({ ...d, ...sheetFor(sheet, d).patchFor(label) }));
           setSheet(null);
         }}
         onCancel={() => setSheet(null)}

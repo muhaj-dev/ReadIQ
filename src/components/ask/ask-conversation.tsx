@@ -18,10 +18,7 @@ import { clockTime } from '@/lib/relative-time';
 import { useChatStore } from '@/store/use-chat-store';
 import type { ChatMessage } from '@/types/chat';
 
-/** The honest "no answer in your notes" replies — the only ungrounded messages
- *  that should still offer "Add a note" and the opt-in outside answer. Reloaded
- *  "beyond" answers are also ungrounded, so we match on the exact fallback text to
- *  tell them apart (their `beyond` flag isn't persisted). */
+/** True for the honest "not in your notes" fallback replies; matches exact text since the beyond flag isn't persisted. */
 function isFallbackReply(content: string): boolean {
   return content === NO_NOTES_YET || content.startsWith(NOT_IN_NOTES);
 }
@@ -45,9 +42,7 @@ function AddNoteCta() {
   );
 }
 
-/** One turn: the student's question, or noteIQ's answer + its source tags.
- *  `nextIsBeyond` = the following message is this turn's outside-notes answer, so
- *  the opt-in button is already used and must be hidden. */
+/** One turn: the question, or noteIQ's answer + source tags. nextIsBeyond hides the used opt-in. */
 function MessageRow({ message, nextIsBeyond }: { message: ChatMessage; nextIsBeyond: boolean }) {
   const generateMore = useChatStore((s) => s.generateMore);
   const answerBeyond = useChatStore((s) => s.answerBeyond);
@@ -58,11 +53,9 @@ function MessageRow({ message, nextIsBeyond }: { message: ChatMessage; nextIsBey
 
   const settled = !message.streaming;
   const fallback = settled && !message.error && !message.beyond && isFallbackReply(message.content);
-  // The first answer is a short briefing, so "Generate more" is offered under every
-  // settled, note-backed answer — until a continuation reports the notes are exhausted.
+  // Offer "Generate more" under every settled, note-backed answer until the notes are exhausted.
   const canGenerateMore = settled && message.grounded && !message.exhausted;
-  // Offer the opt-in outside answer under any settled real reply (grounded answer
-  // or honest fallback) that hasn't already spawned one.
+  // Offer the opt-in outside answer under any settled reply that hasn't spawned one.
   const canAskBeyond =
     settled &&
     !message.error &&
@@ -107,8 +100,7 @@ export function AskConversation({ messages, onPickChip }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const empty = messages.length === 0;
 
-  // Follow the conversation as it grows and as tokens stream in (`messages` gets
-  // a new identity on every token, so this fires throughout the answer).
+  // Follow the conversation as it grows and streams (messages changes identity per token).
   useEffect(() => {
     if (empty) return;
     scrollRef.current?.scrollToEnd({ animated: true });

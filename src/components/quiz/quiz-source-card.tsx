@@ -1,56 +1,44 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AppIcon } from '@/components/ui/app-icon';
-import type { ColorTokens } from '@/constants/theme';
 import { fonts } from '@/constants/typography';
-import type { QuizSubject, QuizSubjectTone } from '@/data/quiz-subjects';
 import { useTheme } from '@/hooks/use-theme';
 import { withAlpha } from '@/lib/color';
+import type { QuizSource } from '@/types/quiz';
 
 type Props = {
-  subject: QuizSubject;
+  source: QuizSource;
   onPress: () => void;
 };
 
-// Tone drives the icon well + icon colour, reusing the memory-panel note tints.
-function toneStyles(tone: QuizSubjectTone, colors: ColorTokens) {
-  if (tone === 'green') return { wellBg: colors.noteGreenWell, iconColor: colors.noteGreen };
-  if (tone === 'amber') return { wellBg: colors.noteAmberWell, iconColor: colors.noteAmber };
-  return { wellBg: colors.surfaceContainer, iconColor: colors.primary };
-}
-
-/** One pickable subject on the Quiz Home screen — tap to start that quiz. */
-export function SubjectCard({ subject, onPress }: Props) {
+/** One quizzable subject on the Quiz Home screen — tap to build a quiz. */
+export function QuizSourceCard({ source, onPress }: Props) {
   const colors = useTheme();
-  const tone = toneStyles(subject.tone, colors);
+  const count = source.notes.length;
 
   return (
     <TouchableOpacity
       accessibilityRole="button"
+      accessibilityLabel={`Quiz yourself on ${source.label}`}
       activeOpacity={0.85}
       onPress={onPress}
       className="w-full flex-row items-center justify-between rounded-card p-4"
       style={[
         styles.card,
-        {
-          backgroundColor: colors.surfaceLowest,
-          borderColor: colors.surfaceLow,
-          shadowColor: colors.shadow,
-        },
+        { backgroundColor: colors.surfaceLowest, borderColor: colors.surfaceLow, shadowColor: colors.shadow },
       ]}>
       <View className="flex-1 flex-row items-center gap-3">
         <View
           className="h-12 w-12 items-center justify-center rounded-lg"
-          style={{ backgroundColor: tone.wellBg }}>
-          <AppIcon name={subject.icon} size={24} color={tone.iconColor} />
+          style={{ backgroundColor: colors.menuPurpleWell }}>
+          <AppIcon name="school" size={24} color={colors.menuPurple} />
         </View>
         <View className="flex-1">
-          <Text style={[styles.title, { color: colors.onSurface }]}>{subject.name}</Text>
-          <Text className="mt-0.5" style={[styles.blurb, { color: colors.onSurfaceVariant }]}>
-            {subject.blurb}
+          <Text numberOfLines={1} style={[styles.title, { color: colors.onSurface }]}>
+            {source.label}
           </Text>
           <Text className="mt-1" style={[styles.count, { color: colors.secondary }]}>
-            {subject.count} questions
+            {count} {count === 1 ? 'note' : 'notes'}
           </Text>
         </View>
       </View>
@@ -71,11 +59,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontFamily: fonts.bodySemibold,
-  },
-  blurb: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: fonts.bodyRegular,
   },
   count: {
     fontSize: 12,

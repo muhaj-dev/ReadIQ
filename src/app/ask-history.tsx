@@ -10,8 +10,7 @@ import { fonts } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
 import { useChatStore } from '@/store/use-chat-store';
 
-/** Chat history — every saved Ask conversation, newest first. Tap one to reopen
- *  it on the Ask screen, or start a fresh chat. Conversations persist to SQLite. */
+/** Chat history — saved Ask conversations, newest first; tap to reopen or start fresh. */
 export default function AskHistoryScreen() {
   const colors = useTheme();
   const router = useRouter();
@@ -80,7 +79,7 @@ export default function AskHistoryScreen() {
               </View>
               <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>No saved chats yet</Text>
               <Text className="mt-1 text-center" style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-                Your conversations with noteIQ will appear here so you can revisit them anytime.
+                Your conversations with readIQ will appear here so you can revisit them anytime.
               </Text>
             </View>
           }

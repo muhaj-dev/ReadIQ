@@ -12,9 +12,7 @@ type Props = {
   onGenerate: () => void;
 };
 
-/** Everything before an episode is ready: the "Create episode" invitation, the
- *  while-writing spinner, and a friendly error with retry. Shown centred on the
- *  Listen screen; the player replaces it once the script is ready. */
+/** Pre-episode states: create invitation, writing spinner, and error with retry. */
 export function EpisodeGate({ status, error, onGenerate }: Props) {
   const colors = useTheme();
 

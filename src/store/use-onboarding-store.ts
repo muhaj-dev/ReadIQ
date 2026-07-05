@@ -1,6 +1,4 @@
-// Remembers whether the student has already been through onboarding, so the
-// splash sends returning students straight to Home. The flag lives in
-// AsyncStorage (lightweight persistence per AGENTS.md) and clears with app data.
+// Onboarding-complete flag (AsyncStorage): lets the splash skip returning students to Home.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';

@@ -10,8 +10,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** Empty attachments state: same card shape as AttachmentCard, but a tap-to-
- *  upload affordance instead of a file row (see the edit / add mocks). */
+/** Empty attachments state: a tap-to-upload card. */
 export function AttachmentUpload({ onPress }: Props) {
   const colors = useTheme();
 

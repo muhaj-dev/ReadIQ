@@ -14,9 +14,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { toMemoryNote } from '@/lib/note-view';
 import { useNotesStore } from '@/store/use-notes-store';
 
-/** MEMORY tab — the Memory Panel: every saved note, searchable and filterable.
- *  Reads live notes from the SQLite-backed useNotesStore. A top-right checkbox
- *  turns the list into a multi-select list with a Share / Delete bar. */
+/** MEMORY tab — the Memory Panel: saved notes, searchable/filterable, with multi-select Share/Delete. */
 export default function MemoryScreen() {
   const colors = useTheme();
   const router = useRouter();

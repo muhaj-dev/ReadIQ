@@ -3,7 +3,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/hooks/use-theme';
 
-/** Full-screen vertical indigo gradient behind the profile panel (see the mock). */
+/** Full-screen vertical indigo gradient behind the profile panel. */
 export function ProfileBackground() {
   const colors = useTheme();
 

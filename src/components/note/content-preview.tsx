@@ -6,13 +6,11 @@ import { useTheme } from '@/hooks/use-theme';
 type Props = {
   heading: string;
   excerpt: string;
-  /** Note image (e.g. a scanned page). Pasted text and PDFs have none — the
-   *  card then shows just heading + excerpt, never a placeholder image well. */
+  /** Note page image; absent for pasted text and PDFs. */
   image?: string | null;
 };
 
-/** The Content Preview card on Note Details: heading, excerpt, and — only when
- *  the note actually carries one — its page image. */
+/** Content Preview card on Note Details: heading, excerpt, optional image. */
 export function ContentPreview({ heading, excerpt, image }: Props) {
   const colors = useTheme();
 

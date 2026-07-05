@@ -9,8 +9,7 @@ import { noteOptions } from '@/data/note-options';
 import { useTheme } from '@/hooks/use-theme';
 import { withAlpha } from '@/lib/color';
 
-/** Note Options — the actions menu card (see the note-options mock). The rows
- *  become live once notes persist; Favorites already toggles locally. */
+/** Note Options — the actions menu card (Favorites toggles locally). */
 export default function NoteOptionsScreen() {
   const colors = useTheme();
   const [favorite, setFavorite] = useState(true);

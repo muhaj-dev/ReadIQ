@@ -10,8 +10,7 @@ type Props = {
   onSelect: (color: string) => void;
 };
 
-/** The pen-tool colour row: pick any highlighter colour before selecting text.
- *  Sits just above the reader toolbar when the highlight tool is active. */
+/** Highlighter colour row, shown above the toolbar when the pen tool is active. */
 export function HighlightPalette({ selected, onSelect }: Props) {
   const colors = useTheme();
 

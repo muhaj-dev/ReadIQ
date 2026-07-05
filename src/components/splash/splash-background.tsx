@@ -3,8 +3,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Colors } from '@/constants/theme';
 
-// The splash flow is intentionally always light (matches the brand mockup),
-// so it reads from the light token set directly rather than useTheme().
+// Splash flow is always light — reads light tokens directly, not useTheme().
 const light = Colors.light;
 
 /** Full-screen vertical gradient backdrop for the splash (white → soft lavender). */

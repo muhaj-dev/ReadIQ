@@ -1,8 +1,6 @@
 import Svg, { Path } from 'react-native-svg';
 
-// The onboarding mockups use Material Symbols. @expo/vector-icons is not
-// installed, but react-native-svg is — so the handful of glyphs we need are
-// inlined here. Path data comes from Material Design icons (Apache 2.0).
+// Material glyphs inlined as SVG (no @expo/vector-icons). Paths from Material Design icons, Apache 2.0.
 const ICON_PATHS = {
   save: 'M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z',
   lightbulb:

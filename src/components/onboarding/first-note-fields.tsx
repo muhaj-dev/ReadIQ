@@ -10,9 +10,7 @@ type Props = {
   onNoteChange: (value: string) => void;
 };
 
-/** Onboarding First Note editor: an optional save-name field above the paste
- *  box. Lives here (not in the screen) so first-note.tsx stays under 150 lines.
- *  Controlled — the screen owns the state. */
+/** Onboarding First Note editor: optional save-name field above the paste box. */
 export function FirstNoteFields({ title, onTitleChange, note, onNoteChange }: Props) {
   return (
     <View className="flex-1 gap-3">

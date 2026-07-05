@@ -1,8 +1,5 @@
-// Parses noteIQ's answer text into the light block structure the model is asked
-// to produce (see lib/chat.ts SYSTEM_PROMPT): paragraphs, "**Heading:**" lines,
-// "- " bullets, "1." numbered steps, and inline **bold** key terms. It is a tiny,
-// forgiving markdown subset — enough to give a dense answer structure without a
-// heavy dependency. Partial/streaming markdown degrades gracefully to plain text.
+// Parses answer text into render blocks (paragraphs, headings, bullets, numbered
+// steps, bold terms) — a tiny forgiving markdown subset that degrades to plain text.
 
 /** A leaf block — the pieces that make up a paragraph or a list. */
 export type Leaf =
@@ -13,9 +10,7 @@ export type Leaf =
 /** A "**Heading:**" line — rendered as a bold section heading. */
 export type Heading = { kind: 'label'; text: string };
 
-/** A term + its definition (a "**Term**" line immediately followed by a body):
- *  rendered as a highlighted definition card so the student sees the definition of
- *  each part up front (see the photosynthesis format). `body` is the leaf beneath. */
+/** A "**Term**" line + the leaf beneath it — rendered as a definition card. */
 export type Definition = { kind: 'definition'; term: string; body: Leaf };
 
 export type Block = Leaf | Heading | Definition;
@@ -82,8 +77,7 @@ function parseBlocks(text: string): Block[] {
       blocks.push({ kind: 'label', text: stripColon(heading[1]) });
     } else if (label) {
       flushAll();
-      // The model often bakes the colon inside the bold ("**Calvin cycle:**"); drop
-      // it so the definition-card term reads cleanly.
+      // Drop a colon baked inside the bold ("**Calvin cycle:**").
       blocks.push({ kind: 'label', text: stripColon(label[1]) });
     } else {
       flushBullets();
@@ -96,12 +90,8 @@ function parseBlocks(text: string): Block[] {
   return blocks;
 }
 
-/**
- * Pair each "**Term**" heading with the leaf directly beneath it into a single
- * `definition` block — the definition-card look (term + its meaning). A heading
- * with no body under it (or another heading right after) stays a plain label, and
- * unlabelled paragraphs (the intro / closing explanation) are untouched.
- */
+/** Pair each "**Term**" heading with the leaf beneath into a `definition` block;
+ *  a heading with no body stays a plain label. */
 function groupDefinitions(blocks: Block[]): Block[] {
   const out: Block[] = [];
   for (let i = 0; i < blocks.length; i += 1) {

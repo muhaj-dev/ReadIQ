@@ -1,14 +1,5 @@
-// The episode player engine — drives real spoken playback of a "From Your Notes"
-// episode via on-device text-to-speech (expo-speech). Each turn is spoken in turn;
-// the highlighted/auto-scrolled turn follows whoever is currently speaking.
-//
-// Why on-device and not BTL: the BTL runtime has no working text-to-speech — its
-// gpt-audio models 400 ("output modality must contain audio") because the gateway
-// doesn't forward the audio-output params (probed live 2026-07-05, $0 spent). So
-// audio is on-device: free, offline, no dev build. Which voice reads each host —
-// and the speaking speed — comes from the podcast voice store (the student picks
-// them, defaulting to the device's best-quality Enhanced voices) so the two hosts
-// sound distinct and far less robotic than the old first-two-voices approach.
+// Episode player: spoken playback of a "From Your Notes" episode via on-device TTS (expo-speech).
+// On-device, not BTL: the BTL runtime has no working text-to-speech (gpt-audio 400s). Voice per host + speed come from the voice store.
 
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -46,9 +37,7 @@ export function useEpisodePlayer(turns: PodcastTurn[]): EpisodePlayer {
   // Bumped on every stop/seek so a stale utterance's onDone can't advance playback.
   const genRef = useRef(0);
 
-  // The student's chosen voice per host + speaking speed (Enhanced-quality
-  // defaults resolved on init). Kept in a ref so the chained speak() always reads
-  // the latest pick without re-creating the playback callbacks.
+  // Chosen voice per host + speed, kept in a ref so chained speak() reads the latest without re-creating callbacks.
   const initVoices = usePodcastVoiceStore((s) => s.init);
   const prefs = usePodcastVoiceStore((s) => s.prefs);
   const prefsRef = useRef(prefs);

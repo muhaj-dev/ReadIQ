@@ -11,8 +11,7 @@ type Props = {
   attachments: NoteAttachment[];
 };
 
-/** Read-only Attachments section on Note Details: image attachments render as a
- *  thumbnail, files as an icon row. Nothing shows when the note has none. */
+/** Read-only Attachments section on Note Details; hidden when the note has none. */
 export function NoteAttachments({ attachments }: Props) {
   const colors = useTheme();
   if (attachments.length === 0) return null;

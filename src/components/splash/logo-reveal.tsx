@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -10,18 +11,18 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { NoteIqMark, NoteIqWordmark } from '@/components/brand/brand-logo';
+import { images } from '@/constants/images';
 import { Colors } from '@/constants/theme';
 import { fonts } from '@/constants/typography';
 
 // Splash flow is always light (see splash-background.tsx).
 const light = Colors.light;
 
-// Source-pixel geometry measured from the brand PNGs: canvas size plus the
-// centre / height of the "IQ" letters' bounding box in each image. These
-// numbers let the mark land exactly on the wordmark's IQ.
-const WORD_SRC = { w: 969, h: 599, iqCx: 786, iqCy: 435, iqH: 228 };
-const MARK_SRC = { w: 587, h: 811, iqCx: 309, iqCy: 581, iqH: 398 };
+// Source-pixel geometry from the readIQ PNGs so the mark's IQ lands on the wordmark's IQ.
+// The mark (readiq-iqmark) is the wordmark's own "✦ IQ" crop, so the IQ is pixel-identical:
+// the mark shows IQ alone first, then the crossfade only reveals "read" beside it.
+const WORD_SRC = { w: 983, h: 584, iqCx: 806, iqCy: 422, iqH: 266 };
+const MARK_SRC = { w: 472, h: 548, iqCx: 316, iqCy: 404, iqH: 266 };
 
 const WORD_W = 224; // rendered wordmark width (dp)
 const ws = WORD_W / WORD_SRC.w;
@@ -35,8 +36,7 @@ const MARK_H = MARK_SRC.h * ms;
 const MARK_LEFT = WORD_SRC.iqCx * ws - MARK_SRC.iqCx * ms;
 const MARK_TOP = WORD_SRC.iqCy * ws - MARK_SRC.iqCy * ms;
 
-// Start state: centred in the box at the native splash size (imageWidth 120
-// in app.json), so this screen continues seamlessly from the native splash.
+// Start centred at the native splash size (imageWidth 120) for a seamless handoff.
 const START_SCALE = 120 / MARK_W;
 const START_TX = WORD_W / 2 - (MARK_LEFT + MARK_W / 2);
 const START_TY = BOX_H / 2 - (MARK_TOP + MARK_H / 2);
@@ -50,11 +50,7 @@ type Props = {
   onSettled: () => void;
 };
 
-/**
- * Splash hero — the "✦ IQ" mark starts centred (matching the native splash),
- * glides right onto the IQ of the full noteIQ wordmark, crossfades into it,
- * then the tagline rises in below.
- */
+/** Splash hero — the "✦ IQ" mark glides onto the wordmark's IQ, then the tagline rises. */
 export function LogoReveal({ onSettled }: Props) {
   const progress = useSharedValue(0); // 0 = centred mark, 1 = in the lockup
   const markOpacity = useSharedValue(1);
@@ -96,11 +92,21 @@ export function LogoReveal({ onSettled }: Props) {
   return (
     <View style={styles.box}>
       <Animated.View style={[StyleSheet.absoluteFill, wordStyle]}>
-        <NoteIqWordmark width={WORD_W} />
+        <Image
+          source={images.readiqWordmark}
+          style={{ width: WORD_W, height: BOX_H }}
+          contentFit="contain"
+          accessibilityLabel="readIQ"
+        />
       </Animated.View>
 
       <Animated.View style={[styles.mark, markStyle]}>
-        <NoteIqMark width={MARK_W} />
+        <Image
+          source={images.readiqMark}
+          style={{ width: MARK_W, height: MARK_H }}
+          contentFit="contain"
+          accessibilityLabel="readIQ"
+        />
       </Animated.View>
 
       <Animated.View style={[styles.tagline, taglineStyle]}>
@@ -112,8 +118,7 @@ export function LogoReveal({ onSettled }: Props) {
   );
 }
 
-// All geometry here is computed from the measured constants above, so it
-// stays in StyleSheet/inline rather than NativeWind classes.
+// Geometry computed from the constants above → StyleSheet, not NativeWind.
 const styles = StyleSheet.create({
   box: { width: WORD_W, height: BOX_H },
   mark: { position: 'absolute', left: MARK_LEFT, top: MARK_TOP },

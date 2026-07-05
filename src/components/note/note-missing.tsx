@@ -11,8 +11,7 @@ type Props = {
   title?: string;
 };
 
-/** Honest fallback when a note id can't be found (deleted, or a stale link) —
- *  shown instead of falling back to sample content. */
+/** Fallback shown when a note id can't be found (deleted or stale link). */
 export function NoteMissing({ title = 'Note' }: Props) {
   const colors = useTheme();
 

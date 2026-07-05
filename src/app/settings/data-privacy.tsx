@@ -7,8 +7,7 @@ import { SettingsHeader } from '@/components/settings/settings-header';
 import { privacyActionGroups } from '@/data/settings';
 import { useTheme } from '@/hooks/use-theme';
 
-/** DATA & PRIVACY — data management, legal, and delete-account cards per the
- *  mock. The actions become real once notes live in SQLite (later phases). */
+/** DATA & PRIVACY — data management, legal, and delete-account cards. */
 export default function DataPrivacyScreen() {
   const colors = useTheme();
 

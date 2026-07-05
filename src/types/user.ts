@@ -1,10 +1,10 @@
-// The student's profile — who they are plus the lightweight, real study metrics
-// the Dashboard and Profile screens display. Persisted to AsyncStorage (not
-// SQLite): it's a single small record, per AGENTS.md's persistence split.
+// Student profile + study metrics shown on Dashboard/Profile. Persisted to AsyncStorage.
 
 export type UserProfile = {
   /** From onboarding. Empty until they tell us. */
   name: string;
+  /** Contact email — collected in onboarding, editable on the profile. */
+  email: string;
   /** Course / exam they're revising for, e.g. "Computer Science". */
   studyingFor: string;
   /** Personal goal, e.g. "Pass my finals". Shown on the profile. */
@@ -22,6 +22,7 @@ export type UserProfile = {
 /** What the onboarding About screen writes — the rest is filled in by the store. */
 export type ProfileInput = {
   name?: string;
+  email?: string;
   studyingFor?: string;
   goal?: string;
 };

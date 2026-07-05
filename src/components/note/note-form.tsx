@@ -39,17 +39,13 @@ type Props = {
   onSave: (values: NoteFormValues) => void;
   /** Optional footer slot (Edit Note uses it for Delete Note). */
   footer?: ReactNode;
-  /** Show the Attachments section at the top (Add Document — so the just-picked
-   *  file is visible the moment the page opens), not after the content. */
+  /** Show Attachments at the top (Add Document) instead of after the content. */
   attachmentsFirst?: boolean;
-  /** Hide the Content editor (Add Document — the note body is the uploaded file's
-   *  extracted text, so the student only sets title/subject/tags here). The text
-   *  still flows through to onSave and is visible when reading/editing the note. */
+  /** Hide the Content editor (Add Document); extracted text still flows to onSave. */
   hideContent?: boolean;
 };
 
-/** The note editor: title, subject (with add-your-own), tags, a WYSIWYG content
- *  editor, and multiple image/file attachments. Saving persists via the store. */
+/** The note editor: title, subject, tags, WYSIWYG content, and attachments. */
 export function NoteForm({ headerTitle, initial, onBack, onSave, footer, attachmentsFirst, hideContent }: Props) {
   const colors = useTheme();
   const subjects = useSubjectsStore((s) => s.subjects);
@@ -62,9 +58,7 @@ export function NoteForm({ headerTitle, initial, onBack, onSave, footer, attachm
   const [sheetOpen, setSheetOpen] = useState(false);
   const [titleError, setTitleError] = useState(false);
 
-  // Capture the opening HTML once — legacy plain-text notes get wrapped, and any
-  // hard breaks are split into separate paragraphs so headings apply per line,
-  // not to the whole note. Never fed back, or the editor would reset.
+  // Capture opening HTML once (wrap legacy text, split hard breaks); never fed back or the editor resets.
   const initialHtml = useRef(
     initial.contentHtml ? splitHardBreaks(initial.contentHtml) : plainTextToHtml(initial.content)
   ).current;
@@ -111,8 +105,7 @@ export function NoteForm({ headerTitle, initial, onBack, onSave, footer, attachm
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
       <StatusBar style="dark" />
-      {/* SafeAreaView doesn't take className (Style Exception Rule). The rich
-          editor handles its own keyboard avoidance, so no outer KAV is needed. */}
+      {/* SafeAreaView takes no className; the editor handles its own keyboard avoidance. */}
       <SafeAreaView edges={['top', 'bottom']} style={styles.flex}>
         <FormHeader title={headerTitle} onBack={onBack} onSave={submit} />
 

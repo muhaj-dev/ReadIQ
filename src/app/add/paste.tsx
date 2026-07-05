@@ -5,8 +5,7 @@ import { emptyNoteDraft } from '@/data/note-detail';
 import { isRichContentEmpty } from '@/lib/rich-text';
 import { useNotesStore } from '@/store/use-notes-store';
 
-/** Add — Paste. Opens the note editor titled "Add Note" with an empty draft.
- *  Saving persists the note to the SQLite-backed Memory store. */
+/** Add — Paste. Opens the note editor with an empty draft; saving persists to Memory. */
 export default function PasteScreen() {
   const router = useRouter();
   const addNote = useNotesStore((s) => s.addNote);

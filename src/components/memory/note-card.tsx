@@ -32,9 +32,7 @@ function tintStyles(tint: NoteTint, colors: ColorTokens) {
   }
 }
 
-/** One saved note in the Memory Panel: icon tile, title, meta, AI-used badge.
- *  In select mode it grows a left checkbox and tapping ticks it instead of
- *  opening the note. */
+/** One saved note card: icon tile, title, meta, AI-used badge; checkbox in select mode. */
 export function NoteCard({ note, onPress, selectable = false, selected = false }: Props) {
   const colors = useTheme();
   const tint = tintStyles(note.tint, colors);

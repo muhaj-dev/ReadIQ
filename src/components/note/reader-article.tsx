@@ -17,15 +17,11 @@ type Props = {
 
 type Colors = ReturnType<typeof useTheme>;
 
-/** The Note Reader article — renders the note exactly as written: heading levels,
- *  bold / italic / underline / strike / highlight inline, lists, quotes, code,
- *  and images. This keeps the reader consistent with the WYSIWYG editor. */
+/** Note Reader article — renders the note's rich blocks exactly as written. */
 export function ReaderArticle({ title, blocks }: Props) {
   const colors = useTheme();
 
-  // Notes whose content was stored as block-quotes shouldn't render as a wall of
-  // accent cards. Demote a quote to a plain paragraph when it sits next to other
-  // quotes (a run) — the quote card is kept only for a genuinely isolated pull-quote.
+  // Demote quotes in a run to plain paragraphs; keep the card only for an isolated pull-quote.
   const demoteQuote = (i: number) =>
     blocks[i].kind === 'quote' &&
     (blocks[i - 1]?.kind === 'quote' || blocks[i + 1]?.kind === 'quote');
@@ -81,8 +77,7 @@ function BlockView({
   }
 
   if (block.kind === 'quote') {
-    // A quote sitting in a run of quotes renders as a plain paragraph, so a note
-    // stored entirely as block-quotes reads as clean body text, not boxed cards.
+    // A quote in a run renders as a plain paragraph, not a boxed card.
     if (plainQuote) {
       return (
         <Text style={[styles.body, { color: colors.onSurfaceVariant }]}>
@@ -171,8 +166,7 @@ function renderSpans(spans: InlineSpan[], colors: Colors, heading = false) {
   ));
 }
 
-/** Map a span's marks to a text style. In headings we keep the heading font
- *  (already bold) and only lean on italic/decoration/highlight. */
+/** Map a span's marks to a text style (headings keep their font). */
 function markStyle(marks: InlineMark[], colors: Colors, heading: boolean): TextStyle {
   const style: TextStyle = {};
   const bold = marks.includes('bold');

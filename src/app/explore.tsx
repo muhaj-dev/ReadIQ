@@ -124,8 +124,7 @@ export default function TabTwoScreen() {
   );
 }
 
-// StyleSheet kept only for the documented exceptions: ScrollView contentContainerStyle,
-// the dynamic pressed-opacity, and aspect-ratio'd image sizing.
+// StyleSheet kept for documented exceptions: contentContainerStyle, pressed-opacity, image sizing.
 const styles = StyleSheet.create({
   contentContainer: {
     flexDirection: 'row',

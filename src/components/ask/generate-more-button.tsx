@@ -10,8 +10,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** Shown under an answer that hit the length cap: the notes hold more, so the
- *  student can pull the rest in. Turns into a calm "Generating…" while it runs. */
+/** Shown under a length-capped answer to pull in the rest; shows "Generating…" while busy. */
 export function GenerateMoreButton({ busy, onPress }: Props) {
   const colors = useTheme();
 

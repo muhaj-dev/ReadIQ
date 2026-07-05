@@ -1,8 +1,6 @@
 import type { AppIconName } from '@/components/ui/app-icon';
 
-// Identity and the study stats now come from the real stores (see
-// hooks/use-profile.ts). Only the account menu is static here — its rows link to
-// features that land in later phases.
+// Static account menu for Profile (identity + stats come from hooks/use-profile.ts).
 
 export type ProfileMenuTone = 'green' | 'blue' | 'orange' | 'slate' | 'purple';
 
@@ -11,6 +9,13 @@ export type ProfileStat = {
   label: string;
 };
 
+/** Where a menu row navigates. Subtitles are filled live in hooks/use-profile-menu.ts. */
+export type ProfileMenuHref =
+  | '/settings'
+  | '/settings/achievements'
+  | '/profile/quiz-performance'
+  | '/profile/study-sessions';
+
 export type ProfileMenuItem = {
   id: string;
   icon: AppIconName;
@@ -18,31 +23,32 @@ export type ProfileMenuItem = {
   title: string;
   subtitle?: string;
   /** Destination when tapped. Rows without one land in later phases. */
-  href?: '/settings';
+  href?: ProfileMenuHref;
 };
 
 export const profile = {
+  // Static template — the live subtitles come from hooks/use-profile-menu.ts.
   menu: [
     {
       id: 'study-sessions',
       icon: 'history-edu',
       tone: 'green',
       title: 'Study Sessions',
-      subtitle: '25 completed',
+      href: '/profile/study-sessions',
     },
     {
       id: 'quiz-performance',
       icon: 'analytics',
       tone: 'blue',
       title: 'Quiz Performance',
-      subtitle: 'Average 84%',
+      href: '/profile/quiz-performance',
     },
     {
       id: 'achievements',
       icon: 'trophy',
       tone: 'orange',
       title: 'Achievements',
-      subtitle: '12 unlocked',
+      href: '/settings/achievements',
     },
     { id: 'settings', icon: 'settings', tone: 'slate', title: 'Settings', href: '/settings' },
     { id: 'help', icon: 'help', tone: 'purple', title: 'Help & Support' },

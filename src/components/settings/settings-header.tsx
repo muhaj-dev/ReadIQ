@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
   title: string;
-  /** Data & Privacy tints the chevron + title in primary (see its mock). */
+  /** Data & Privacy tints the chevron + title in primary. */
   accent?: boolean;
 };
 

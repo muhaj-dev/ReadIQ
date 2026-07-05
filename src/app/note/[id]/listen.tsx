@@ -12,9 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useNotesStore } from '@/store/use-notes-store';
 import { usePodcastStore } from '@/store/use-podcast-store';
 
-/** "From Your Notes" — the note's two-host podcast episode. The script is written
- *  strictly from this note (no retrieval, no outside facts) and cached, so the
- *  runtime is only called when the student taps "Create episode" or regenerates. */
+/** "From Your Notes" — the note's two-host podcast episode, scripted from this note and cached. */
 export default function ListenScreen() {
   const colors = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();

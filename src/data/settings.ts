@@ -1,5 +1,4 @@
-// Static content for the Settings + Data & Privacy screens (see the settings
-// mocks). Values become live once useSettingsStore lands — the rows are UI-first.
+// Static content for the Settings + Data & Privacy screens (UI-first).
 
 import type { AppIconName } from '@/components/ui/app-icon';
 

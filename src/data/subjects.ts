@@ -1,3 +1,2 @@
-// Subject / course tags for notes and quizzes. The student can add their own in
-// the note editor (persisted via the subjects store); these are the starters.
+// Starter subject/course tags for notes and quizzes (student can add more).
 export const defaultSubjects = ['General', 'Biology', 'Chemistry', 'Physics'];

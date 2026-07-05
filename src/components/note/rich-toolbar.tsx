@@ -1,7 +1,10 @@
 import type { EditorBridge } from '@10play/tentap-editor';
 import { useBridgeState } from '@10play/tentap-editor';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { EditorColorRow } from '@/components/note/editor-color-row';
+import { LinkInputModal } from '@/components/note/link-input-modal';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { EditorHighlight } from '@/constants/theme';
 import { fonts } from '@/constants/typography';
@@ -22,13 +25,12 @@ type Tool =
 
 type Colors = ReturnType<typeof useTheme>;
 
-/** Formatting bar above the rich editor. Horizontally scrollable so it holds the
- *  full set — undo/redo · bold/italic/underline/strike/highlight · H1–H3 ·
- *  bullet/numbered/checklist · quote/code — plus insert-image, without crowding
- *  the phone. Buttons light up (accent) when their mark is active at the cursor. */
+/** Horizontally-scrollable formatting bar above the rich editor. */
 export function RichToolbar({ editor, onInsertImage }: Props) {
   const colors = useTheme();
   const state = useBridgeState(editor);
+  const [showColors, setShowColors] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const tools: Tool[] = [
     { kind: 'icon', icon: 'undo', label: 'Undo', disabled: !state.canUndo, onPress: () => editor.undo() },
@@ -39,6 +41,8 @@ export function RichToolbar({ editor, onInsertImage }: Props) {
     { kind: 'icon', icon: 'format-underlined', label: 'Underline', active: state.isUnderlineActive, onPress: () => editor.toggleUnderline() },
     { kind: 'icon', icon: 'format-strikethrough', label: 'Strikethrough', active: state.isStrikeActive, onPress: () => editor.toggleStrike() },
     { kind: 'icon', icon: 'highlight', label: 'Highlight', active: !!state.activeHighlight, onPress: () => editor.toggleHighlight(EditorHighlight) },
+    { kind: 'icon', icon: 'format-color-text', label: 'Text colour', active: showColors || !!state.activeColor, onPress: () => setShowColors((now) => !now) },
+    { kind: 'icon', icon: 'link', label: 'Link', active: state.isLinkActive, disabled: !state.canSetLink && !state.isLinkActive, onPress: () => setLinkOpen(true) },
     { kind: 'divider' },
     { kind: 'text', text: 'H1', label: 'Heading 1', active: state.headingLevel === 1, onPress: () => editor.toggleHeading(1) },
     { kind: 'text', text: 'H2', label: 'Heading 2', active: state.headingLevel === 2, onPress: () => editor.toggleHeading(2) },
@@ -72,12 +76,33 @@ export function RichToolbar({ editor, onInsertImage }: Props) {
           )
         )}
       </ScrollView>
+
+      {showColors ? (
+        <EditorColorRow
+          activeColor={state.activeColor}
+          onSelect={(color) => editor.setColor(color)}
+          onClear={() => editor.unsetColor()}
+        />
+      ) : null}
+
+      <LinkInputModal
+        visible={linkOpen}
+        initialUrl={state.activeLink}
+        onSubmit={(url) => {
+          editor.setLink(url);
+          setLinkOpen(false);
+        }}
+        onRemove={() => {
+          editor.setLink('');
+          setLinkOpen(false);
+        }}
+        onClose={() => setLinkOpen(false)}
+      />
     </View>
   );
 }
 
-/** A single tappable formatting control — icon or "H1"-style text label. Tints
- *  accent + gains a soft fill when active; dims when disabled (undo/redo). */
+/** A single formatting control — icon or text label; tints when active. */
 function ToolButton({ tool, colors }: { tool: Exclude<Tool, { kind: 'divider' }>; colors: Colors }) {
   const active = 'active' in tool && tool.active;
   const disabled = tool.kind === 'icon' && !!tool.disabled;

@@ -4,14 +4,14 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { ChatMessage, ChatSession, Citation, Role } from '@/types/chat';
-import type { Note, NoteAttachment, NoteComment, NoteSource } from '@/types/note';
+import type { Deadline } from '@/types/deadline';
+import type { Note, NoteAttachment, NoteComment, NoteSource, PdfAnnotations } from '@/types/note';
 import type { PodcastCoverage, PodcastEpisode, PodcastTurn } from '@/types/podcast';
+import type { GeneratedQuiz, QuizQuestion, QuizResult } from '@/types/quiz';
 
 const DB_NAME = 'noteiq.db';
 
-// The notes table mirrors AGENTS.md's schema, plus a `tags` JSON column so the
-// editor's topic tags survive a save. The `subjects` table remembers courses the
-// student typed in the editor so they reappear in the picker next session.
+// notes has a `tags` JSON column; `subjects` remembers courses for the picker.
 const SCHEMA = `
   PRAGMA journal_mode = WAL;
   CREATE TABLE IF NOT EXISTS notes (
@@ -51,13 +51,41 @@ const SCHEMA = `
     turns        TEXT NOT NULL,
     created_at   TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS quizzes (
+    source_id    TEXT PRIMARY KEY NOT NULL,
+    content_hash TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    questions    TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS quiz_results (
+    id           TEXT PRIMARY KEY NOT NULL,
+    source_id    TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    total        INTEGER NOT NULL,
+    correct      INTEGER NOT NULL,
+    weak_topics  TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS deadlines (
+    id             TEXT PRIMARY KEY NOT NULL,
+    title          TEXT NOT NULL,
+    subject        TEXT,
+    type           TEXT NOT NULL DEFAULT '',
+    due_date       TEXT NOT NULL,
+    reminder_on    INTEGER NOT NULL DEFAULT 0,
+    reminder_label TEXT NOT NULL DEFAULT '',
+    repeat         TEXT NOT NULL DEFAULT '',
+    notes          TEXT NOT NULL DEFAULT '',
+    color_index    INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL
+  );
 `;
 
 // Open + migrate exactly once; every helper awaits this so ordering never matters.
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-/** Add columns introduced after the first schema shipped. CREATE TABLE IF NOT
- *  EXISTS can't alter an existing `notes` table, so add missing columns by hand. */
+/** Add columns introduced after the first schema shipped (CREATE IF NOT EXISTS can't alter). */
 async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   const cols = await db.getAllAsync<{ name: string }>("PRAGMA table_info('notes')");
   const names = new Set(cols.map((c) => c.name));
@@ -77,6 +105,50 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   // AI summary of the note's own text (upload flow fills it; null otherwise).
   if (!names.has('ai_summary')) {
     await db.execAsync('ALTER TABLE notes ADD COLUMN ai_summary TEXT');
+  }
+  // PDF Reader annotations (highlights/comments as page geometry); null until first annotation.
+  if (!names.has('pdf_annotations')) {
+    await db.execAsync('ALTER TABLE notes ADD COLUMN pdf_annotations TEXT');
+  }
+
+  await migrateQuizTables(db);
+}
+
+/** Quiz tables were re-keyed note_id → source_id (per-subject). Old devices lack
+ *  the column and CREATE IF NOT EXISTS won't alter; both tables are disposable, so
+ *  drop and recreate when source_id is missing. */
+async function migrateQuizTables(db: SQLite.SQLiteDatabase): Promise<void> {
+  const hasSourceId = async (table: string) => {
+    const cols = await db.getAllAsync<{ name: string }>(`PRAGMA table_info('${table}')`);
+    return cols.length === 0 || cols.some((c) => c.name === 'source_id');
+  };
+
+  if (!(await hasSourceId('quizzes'))) {
+    await db.execAsync('DROP TABLE IF EXISTS quizzes');
+    await db.execAsync(
+      `CREATE TABLE quizzes (
+         source_id    TEXT PRIMARY KEY NOT NULL,
+         content_hash TEXT NOT NULL,
+         source_label TEXT NOT NULL,
+         questions    TEXT NOT NULL,
+         created_at   TEXT NOT NULL
+       )`,
+    );
+  }
+
+  if (!(await hasSourceId('quiz_results'))) {
+    await db.execAsync('DROP TABLE IF EXISTS quiz_results');
+    await db.execAsync(
+      `CREATE TABLE quiz_results (
+         id           TEXT PRIMARY KEY NOT NULL,
+         source_id    TEXT NOT NULL,
+         source_label TEXT NOT NULL,
+         total        INTEGER NOT NULL,
+         correct      INTEGER NOT NULL,
+         weak_topics  TEXT NOT NULL DEFAULT '[]',
+         created_at   TEXT NOT NULL
+       )`,
+    );
   }
 }
 
@@ -104,6 +176,7 @@ type NoteRow = {
   reader_html: string | null;
   comments: string | null;
   ai_summary: string | null;
+  pdf_annotations: string | null;
   created_at: string;
 };
 
@@ -136,6 +209,20 @@ function parseComments(raw: string | null): NoteComment[] {
   }
 }
 
+function parsePdfAnnotations(raw: string | null): PdfAnnotations | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      highlights: Array.isArray(parsed.highlights) ? parsed.highlights : [],
+      comments: Array.isArray(parsed.comments) ? parsed.comments : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 function rowToNote(row: NoteRow): Note {
   return {
     id: row.id,
@@ -148,6 +235,7 @@ function rowToNote(row: NoteRow): Note {
     attachments: parseAttachments(row.attachments),
     readerHtml: row.reader_html ?? null,
     comments: parseComments(row.comments),
+    pdfAnnotations: parsePdfAnnotations(row.pdf_annotations),
     aiSummary: row.ai_summary ?? null,
     createdAt: row.created_at,
   };
@@ -156,7 +244,7 @@ function rowToNote(row: NoteRow): Note {
 export async function insertNote(note: Note): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO notes (id, title, subject, content, content_html, source, tags, attachments, reader_html, comments, ai_summary, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO notes (id, title, subject, content, content_html, source, tags, attachments, reader_html, comments, pdf_annotations, ai_summary, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     note.id,
     note.title,
     note.subject,
@@ -167,6 +255,7 @@ export async function insertNote(note: Note): Promise<void> {
     JSON.stringify(note.attachments),
     note.readerHtml,
     JSON.stringify(note.comments),
+    note.pdfAnnotations ? JSON.stringify(note.pdfAnnotations) : null,
     note.aiSummary,
     note.createdAt,
   );
@@ -196,11 +285,12 @@ export async function updateNote(
     attachments: NoteAttachment[];
     readerHtml: string | null;
     comments: NoteComment[];
+    pdfAnnotations: PdfAnnotations | null;
   },
 ): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'UPDATE notes SET title = ?, subject = ?, content = ?, content_html = ?, tags = ?, attachments = ?, reader_html = ?, comments = ? WHERE id = ?',
+    'UPDATE notes SET title = ?, subject = ?, content = ?, content_html = ?, tags = ?, attachments = ?, reader_html = ?, comments = ?, pdf_annotations = ? WHERE id = ?',
     fields.title,
     fields.subject,
     fields.content,
@@ -209,6 +299,7 @@ export async function updateNote(
     JSON.stringify(fields.attachments),
     fields.readerHtml,
     JSON.stringify(fields.comments),
+    fields.pdfAnnotations ? JSON.stringify(fields.pdfAnnotations) : null,
     id,
   );
 }
@@ -216,7 +307,7 @@ export async function updateNote(
 export async function deleteNote(id: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM notes WHERE id = ?', id);
-  // A note's cached podcast episode is meaningless once the note is gone.
+  // Drop the note's cached podcast; quizzes are subject-keyed and self-heal.
   await db.runAsync('DELETE FROM podcast_episodes WHERE note_id = ?', id);
 }
 
@@ -237,8 +328,7 @@ export async function insertSubject(name: string): Promise<void> {
 }
 
 // ── Chat history (Ask ★ conversations) ──────────────────────────────────────
-// A session is one conversation; its messages are the turns. The list view reads
-// each session's first question as a preview and counts its turns via subqueries.
+// A session is one conversation; its messages are the turns.
 
 type SessionRow = {
   id: string;
@@ -362,9 +452,7 @@ export async function deleteChatSession(id: string): Promise<void> {
 }
 
 // ── Podcast episodes ("From Your Notes") ─────────────────────────────────────
-// One cached episode per note, keyed by note_id. `content_hash` fingerprints the
-// note text the script was written from, so the store can tell a fresh episode
-// from a stale one (the note changed) without re-reading the whole note.
+// One cached episode per note; `content_hash` flags a stale episode after edits.
 
 type EpisodeRow = {
   note_id: string;
@@ -417,4 +505,173 @@ export async function savePodcastEpisode(episode: PodcastEpisode): Promise<void>
     JSON.stringify(episode.turns),
     episode.createdAt,
   );
+}
+
+// ── Quizzes ──────────────────────────────────────────────────────────────────
+// Cached quiz per subject so a retake replays free; `quiz_results` is the
+// finished-attempt history the Dashboard reads for score + weak topics.
+
+type QuizRow = {
+  source_id: string;
+  content_hash: string;
+  source_label: string;
+  questions: string;
+  created_at: string;
+};
+
+function parseQuestions(raw: string): QuizQuestion[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as QuizQuestion[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The subject's cached quiz, or null if none has been generated yet. */
+export async function getQuiz(sourceId: string): Promise<GeneratedQuiz | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<QuizRow>('SELECT * FROM quizzes WHERE source_id = ?', sourceId);
+  if (!row) return null;
+  return {
+    sourceId: row.source_id,
+    contentHash: row.content_hash,
+    sourceLabel: row.source_label,
+    questions: parseQuestions(row.questions),
+    createdAt: row.created_at,
+  };
+}
+
+/** Save (or replace) the subject's quiz — one per subject, newest wins. */
+export async function saveQuiz(quiz: GeneratedQuiz): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO quizzes (source_id, content_hash, source_label, questions, created_at) VALUES (?, ?, ?, ?, ?)',
+    quiz.sourceId,
+    quiz.contentHash,
+    quiz.sourceLabel,
+    JSON.stringify(quiz.questions),
+    quiz.createdAt,
+  );
+}
+
+type QuizResultRow = {
+  id: string;
+  source_id: string;
+  source_label: string;
+  total: number;
+  correct: number;
+  weak_topics: string;
+  created_at: string;
+};
+
+function parseWeakTopics(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Persist one finished attempt. */
+export async function insertQuizResult(result: QuizResult): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO quiz_results (id, source_id, source_label, total, correct, weak_topics, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    result.id,
+    result.sourceId,
+    result.sourceLabel,
+    result.total,
+    result.correct,
+    JSON.stringify(result.weakTopics),
+    result.createdAt,
+  );
+}
+
+/** Recent finished attempts, newest first — the Dashboard's quiz data source. */
+export async function listQuizResults(limit = 20): Promise<QuizResult[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<QuizResultRow>(
+    'SELECT * FROM quiz_results ORDER BY created_at DESC LIMIT ?',
+    limit,
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    sourceId: r.source_id,
+    sourceLabel: r.source_label,
+    total: r.total,
+    correct: r.correct,
+    weakTopics: parseWeakTopics(r.weak_topics),
+    createdAt: r.created_at,
+  }));
+}
+
+// ── Deadlines ────────────────────────────────────────────────────────────────
+// Urgency + countdown are derived from due_date at read time, never stored.
+
+type DeadlineRow = {
+  id: string;
+  title: string;
+  subject: string | null;
+  type: string;
+  due_date: string;
+  reminder_on: number;
+  reminder_label: string;
+  repeat: string;
+  notes: string;
+  color_index: number;
+  created_at: string;
+};
+
+function rowToDeadline(row: DeadlineRow): Deadline {
+  return {
+    id: row.id,
+    title: row.title,
+    subject: row.subject,
+    type: row.type,
+    dueDate: row.due_date,
+    reminderOn: row.reminder_on === 1,
+    reminderLabel: row.reminder_label,
+    repeat: row.repeat,
+    notes: row.notes,
+    colorIndex: row.color_index,
+    createdAt: row.created_at,
+  };
+}
+
+/** Every saved deadline, soonest-due first. */
+export async function listDeadlines(): Promise<Deadline[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<DeadlineRow>('SELECT * FROM deadlines ORDER BY due_date ASC');
+  return rows.map(rowToDeadline);
+}
+
+export async function insertDeadline(deadline: Deadline): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO deadlines (id, title, subject, type, due_date, reminder_on, reminder_label, repeat, notes, color_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    deadline.id,
+    deadline.title,
+    deadline.subject,
+    deadline.type,
+    deadline.dueDate,
+    deadline.reminderOn ? 1 : 0,
+    deadline.reminderLabel,
+    deadline.repeat,
+    deadline.notes,
+    deadline.colorIndex,
+    deadline.createdAt,
+  );
+}
+
+/** Flip a deadline's reminder on/off (the list-card toggle). */
+export async function setDeadlineReminder(id: string, on: boolean): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE deadlines SET reminder_on = ? WHERE id = ?', on ? 1 : 0, id);
+}
+
+export async function deleteDeadline(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM deadlines WHERE id = ?', id);
 }

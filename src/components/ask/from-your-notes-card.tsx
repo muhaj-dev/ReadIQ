@@ -11,10 +11,7 @@ type Props = {
   noteTitle: string;
 };
 
-/**
- * The signature trust tag: proof the answer came from a real saved note.
- * Tapping it opens the source note (note/[id]) so the student can verify it.
- */
+/** Trust tag proving the answer came from a saved note; taps open it. */
 export function FromYourNotesCard({ noteId, noteTitle }: Props) {
   const colors = useTheme();
   const router = useRouter();

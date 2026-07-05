@@ -27,8 +27,7 @@ export function AskInputBar({ value, onChangeText, onSend }: Props) {
           },
         ]}>
         {/* TextInput doesn't take className (Style Exception Rule) → inline style. */}
-        {/* multiline + default return key → the keyboard shows Enter (newline),
-            not "send", so students can write freely. Tap the button to send. */}
+        {/* multiline + default return key shows Enter (newline), not send; tap the button to send. */}
         <TextInput
           value={value}
           onChangeText={onChangeText}

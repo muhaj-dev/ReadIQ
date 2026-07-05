@@ -14,13 +14,10 @@ type Props = {
   onChangeHtml: (html: string) => void;
 };
 
-// A tall, fixed box so the content scrolls INSIDE the editor and the Save /
-// attachment controls below it stay reachable (per the request).
+// Fixed height so content scrolls inside the editor, keeping controls reachable.
 const EDITOR_HEIGHT = 500;
 
-/** WYSIWYG note editor (bold, italic, headings, lists, inline images) built on
- *  TenTap over a WebView. Content stays HTML here; the form derives plain text
- *  from it on Save so grounding/citations keep working. */
+/** WYSIWYG note editor (TenTap/WebView); content stays HTML, form derives plain text. */
 export function RichContentEditor({ initialHtml, onChangeHtml }: Props) {
   const colors = useTheme();
   const editor = useEditorBridge({
@@ -29,8 +26,7 @@ export function RichContentEditor({ initialHtml, onChangeHtml }: Props) {
     initialContent: initialHtml,
   });
 
-  // Live HTML → parent, so Save always has the latest content. `onChangeHtml`
-  // is the parent's stable state setter, so this can't loop.
+  // Push live HTML up; onChangeHtml is a stable setter, so this can't loop.
   const html = useEditorContent(editor, { type: 'html' });
   useEffect(() => {
     if (html != null) onChangeHtml(html);

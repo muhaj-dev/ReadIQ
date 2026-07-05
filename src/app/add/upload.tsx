@@ -8,8 +8,8 @@ import { NoteForm } from '@/components/note/note-form';
 import { emptyNoteDraft } from '@/data/note-detail';
 import { useTheme } from '@/hooks/use-theme';
 import { BtlError } from '@/lib/btl';
-import { isPdf, pickFileAttachments } from '@/lib/files';
-import { extractPdfsText } from '@/lib/pdf-extract';
+import { extractDocumentsText, isExtractable } from '@/lib/document-extract';
+import { pickFileAttachments } from '@/lib/files';
 import { plainTextToHtml } from '@/lib/rich-text';
 import { summarizeNoteText } from '@/lib/summarize';
 import { useNotesStore } from '@/store/use-notes-store';
@@ -17,11 +17,8 @@ import type { NoteAttachment } from '@/types/note';
 
 type Status = 'picking' | 'reading' | 'summarizing' | 'error' | 'ready';
 
-/** Add — Upload. Opens the file picker; a picked PDF has its text pulled out
- *  through the BTL runtime and a short AI summary written for it. The Add
- *  Document form still asks for a title, subject, and tags — only the Content
- *  editor is hidden, so the page stays clean while the extracted text is kept on
- *  the note (visible when reading/editing). Non-PDFs just attach. */
+/** Add — Upload. Picks a PDF (text extracted via BTL) or a .docx (unpacked locally),
+ *  then summarizes the extracted text. Other file types attach without extraction. */
 export default function UploadScreen() {
   const colors = useTheme();
   const router = useRouter();
@@ -41,7 +38,7 @@ export default function UploadScreen() {
     setError(undefined);
     let text = '';
     try {
-      text = await extractPdfsText(files);
+      text = await extractDocumentsText(files);
       console.log('[upload] extracted text length:', text.length);
     } catch (err) {
       console.warn('[upload] extraction threw:', err instanceof BtlError ? `${err.kind}: ${err.message}` : err);
@@ -49,16 +46,14 @@ export default function UploadScreen() {
       setStatus('error');
       return;
     }
-    // The call succeeded but came back with no readable text — don't silently save
-    // a blank note. Let the student retry or add the file without extracted text.
-    if (files.some(isPdf) && !text.trim()) {
+    // Extraction succeeded but found no text — don't silently save a blank note; let the student retry.
+    if (files.some(isExtractable) && !text.trim()) {
       setError("We couldn't find readable text in that document. Add it as an attachment and type your notes, or try again.");
       setStatus('error');
       return;
     }
     setContent(text);
-    // Summary is best-effort — a runtime hiccup just leaves it off; the note still
-    // saves with the extracted text. Generated once here so save stays instant.
+    // Summary is best-effort; a hiccup just leaves it off. Generated once here so save stays instant.
     if (text.trim()) {
       setStatus('summarizing');
       try {
@@ -74,12 +69,14 @@ export default function UploadScreen() {
     if (started.current) return;
     started.current = true;
     (async () => {
-      const files = await pickFileAttachments();
+      const files = await pickFileAttachments({ extractableOnly: true });
       if (!files.length) return back();
       setAttachments(files);
-      const hasPdf = files.some(isPdf);
-      console.log('[upload] pdf detected?', hasPdf, '→', hasPdf ? 'extracting' : 'skipping extraction');
-      if (hasPdf) extract(files);
+      // Picker is limited to PDF/.docx, but some Android pickers ignore the MIME filter —
+      // keep the guard so a stray other type just attaches instead of failing extraction.
+      const hasExtractable = files.some(isExtractable);
+      console.log('[upload] extractable detected?', hasExtractable, '→', hasExtractable ? 'extracting' : 'skipping extraction');
+      if (hasExtractable) extract(files);
       else setStatus('ready');
     })();
     // Runs once — the ref guards against a double pick.

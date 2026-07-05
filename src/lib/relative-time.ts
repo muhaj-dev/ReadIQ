@@ -1,8 +1,6 @@
-// Short, friendly "time ago" labels for timestamps shown in the UI (e.g. the
-// reader's Figma-style comment header). Kept tiny and dependency-free.
+// Short, dependency-free "time ago" labels for UI timestamps.
 
-/** Turn an ISO timestamp into a compact relative label ("just now", "5m ago",
- *  "3d ago"). Returns '' for an unparseable/empty value so callers can hide it. */
+/** ISO timestamp → compact relative label ("just now", "5m ago"); '' if unparseable. */
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return '';
   const then = new Date(iso).getTime();
@@ -29,8 +27,7 @@ export function timeAgo(iso: string | null | undefined): string {
   return `${Math.floor(days / 365)}y ago`;
 }
 
-/** Wall-clock label like "10:30 AM" for chat message timestamps. Formatted by
- *  hand (no Intl) so it renders identically on Hermes. '' for a bad value. */
+/** Wall-clock label like "10:30 AM"; hand-formatted (no Intl) for Hermes. '' if bad. */
 export function clockTime(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);

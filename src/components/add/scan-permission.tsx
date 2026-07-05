@@ -28,8 +28,8 @@ export function ScanPermission({ canAskAgain, onRequest }: Props) {
       </Text>
       <Text className="text-center" style={styles.message}>
         {canAskAgain
-          ? 'noteIQ uses the camera to scan pages of your notes.'
-          : 'Camera access is turned off — enable it for noteIQ in your device Settings.'}
+          ? 'readIQ uses the camera to scan pages of your notes.'
+          : 'Camera access is turned off — enable it for readIQ in your device Settings.'}
       </Text>
       {canAskAgain ? (
         <TouchableOpacity

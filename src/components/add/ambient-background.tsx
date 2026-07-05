@@ -3,8 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { GlowCircle } from '@/components/ui/glow-circle';
 import { useTheme } from '@/hooks/use-theme';
 
-/** The scan-result mock's atmospheric backdrop: two soft colour glows bleeding
- *  in from the top-right and bottom-left corners. */
+/** Scan-result backdrop: two soft colour glows from opposite corners. */
 export function AmbientBackground() {
   const colors = useTheme();
 

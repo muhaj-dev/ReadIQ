@@ -16,8 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 type Props = { note: NoteDetail };
 
-/** The annotatable Note Reader: the note as a WebView page with a floating pen
- *  (highlight) + comment toolbar. Highlights and comments persist to the note. */
+/** Annotatable Note Reader: a WebView page with a highlight + comment toolbar. */
 export function NoteReaderView({ note }: Props) {
   const colors = useTheme();
   const router = useRouter();
@@ -118,8 +117,7 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  // Keep the history pill above the WebView (the pill carries its own elevation
-  // for Android stacking; the wrapper stays transparent to avoid a stray shadow).
+  // Keep the history pill above the WebView (pill carries its own Android elevation).
   history: {
     zIndex: 10,
   },

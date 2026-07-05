@@ -10,8 +10,7 @@ type Props = {
   more: string;
 };
 
-/** The AI Summary section on Note Details, with a Show more/less toggle that
- *  only appears when there's extra text to reveal (a one-line summary has none). */
+/** AI Summary section with a Show more/less toggle when extra text exists. */
 export function AiSummary({ summary, more }: Props) {
   const colors = useTheme();
   const [expanded, setExpanded] = useState(false);

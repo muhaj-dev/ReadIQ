@@ -7,7 +7,7 @@ type Props = {
   width?: number;
 };
 
-/** The square "✦ IQ" brand mark (transparent PNG). Used on the first splash stage. */
+/** The square "✦ IQ" brand mark (transparent PNG). */
 export function NoteIqMark({ width = 150 }: Props) {
   return (
     <Image
@@ -19,7 +19,7 @@ export function NoteIqMark({ width = 150 }: Props) {
   );
 }
 
-/** The full "noteIQ" wordmark lockup (transparent PNG). Used on the second splash stage. */
+/** The full brand wordmark lockup (transparent PNG — readIQ asset to be dropped in). */
 export function NoteIqWordmark({ width = 240 }: Props) {
   return (
     <Image

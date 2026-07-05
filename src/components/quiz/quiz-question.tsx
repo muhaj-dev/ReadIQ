@@ -7,7 +7,7 @@ type Props = {
   prompt: string;
 };
 
-/** The current question, shown large and bold in indigo (see the mock). */
+/** The current question, shown large and bold. */
 export function QuizQuestion({ prompt }: Props) {
   const colors = useTheme();
   return <Text style={[styles.prompt, { color: colors.primary }]}>{prompt}</Text>;

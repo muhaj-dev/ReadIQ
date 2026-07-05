@@ -6,8 +6,7 @@ import { NoteMissing } from '@/components/note/note-missing';
 import { useNoteDetail } from '@/data/note-detail';
 import { useNotesStore } from '@/store/use-notes-store';
 
-/** Edit Note — the shared note editor pre-filled from the real saved note, with
- *  a Delete Note footer. Saving/deleting persists via the Memory store. */
+/** Edit Note — the shared editor pre-filled from the saved note, with a Delete footer. */
 export default function EditNoteScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();

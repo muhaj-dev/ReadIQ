@@ -14,8 +14,7 @@ type Props = {
   noteTitle: string;
 };
 
-/** The ready state: the scrolling two-host transcript plus the pinned player
- *  controls, wired to the read-along engine (which advances the highlight). */
+/** Ready state: the two-host transcript plus pinned player controls. */
 export function EpisodePlayer({ episode, noteTitle }: Props) {
   const player = useEpisodePlayer(episode.turns);
   const activeSpeaker = episode.turns[player.activeIndex]?.speaker;

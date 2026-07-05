@@ -7,8 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { withAlpha } from '@/lib/color';
 import { buildReaderDocument } from '@/lib/reader-doc';
 
-/** Imperative handle the reader screen uses to unwrap a mark (cancel/delete) or
- *  restore a whole DOM snapshot (undo/redo). */
+/** Imperative handle: unwrap a mark, or restore a DOM snapshot (undo/redo). */
 export type ReaderWebViewHandle = {
   removeMark: (cid: string) => void;
   /** Replace the reader's body HTML in place — used by undo/redo. */
@@ -26,9 +25,7 @@ type Props = {
   onOpenComment: (cid: string) => void;
 };
 
-/** The note rendered as an annotatable page. Selection → highlight/comment and
- *  taps on markers happen in-page (see lib/reader-doc); this bridges those
- *  events to React Native and pushes tool/colour changes back down. */
+/** Note rendered as an annotatable page; bridges in-page events to React Native. */
 export const ReaderWebView = forwardRef<ReaderWebViewHandle, Props>(function ReaderWebView(
   { title, initialHtml, mode, highlightColor, onChangeHtml, onRequestComment, onOpenComment },
   ref,
@@ -99,6 +96,9 @@ export const ReaderWebView = forwardRef<ReaderWebViewHandle, Props>(function Rea
       onMessage={onMessage}
       style={[styles.web, { backgroundColor: colors.surfaceLowest }]}
       showsVerticalScrollIndicator={false}
+      // GPU-composited layer + no overscroll glow → smooth, non-janky scrolling.
+      androidLayerType="hardware"
+      overScrollMode="never"
       // Let file:// attachment images resolve inside the inline document.
       allowFileAccess
       allowFileAccessFromFileURLs

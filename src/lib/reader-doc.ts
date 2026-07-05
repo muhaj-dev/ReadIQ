@@ -1,12 +1,7 @@
-// The HTML document rendered inside the Note Reader's WebView. It turns a saved
-// note into a page the student can read AND annotate like a PDF: select text to
-// highlight it in any colour, or attach a margin comment to a passage. All the
-// selection/marking logic runs in-page (a WebView can style arbitrary text
-// ranges, which native <Text> can't) and talks to React Native over
-// postMessage. Highlights are baked into the DOM as `<mark class="hl">`; comment
-// anchors as `<mark class="cm" data-cid>` whose bodies live on the RN side.
-//
-// Kept as a pure string builder (no React) so the reader component stays small.
+// The HTML document for the Note Reader's WebView: read + annotate (highlight /
+// margin comment). In-page selection logic talks to RN over postMessage;
+// highlights bake into the DOM as `<mark class="hl">`, comments as `mark.cm`.
+// A pure string builder (no React).
 
 import type { AnnotationMode } from '@/data/note-annotations';
 
@@ -177,10 +172,12 @@ export function buildReaderDocument(opts: ReaderDocOptions): string {
         return el && el.closest ? el.closest(selector) : null;
       }
 
+      // Passive listeners so the browser never waits on our handlers before
+      // scrolling — non-passive touch listeners are a classic cause of scroll lag.
       document.addEventListener('touchstart', function (e) {
         var t = e.touches && e.touches[0];
         down = t ? { x: t.clientX, y: t.clientY } : null;
-      }, true);
+      }, { capture: true, passive: true });
 
       function onRelease(e) {
         setTimeout(function () {
@@ -207,7 +204,7 @@ export function buildReaderDocument(opts: ReaderDocOptions): string {
         }, 10);
       }
 
-      document.addEventListener('touchend', onRelease, true);
+      document.addEventListener('touchend', onRelease, { capture: true, passive: true });
       document.addEventListener('mouseup', onRelease, true);
       document.body.setAttribute('data-mode', mode);
       post({ type: 'ready' });

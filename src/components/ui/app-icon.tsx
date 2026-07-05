@@ -1,9 +1,7 @@
 import Svg, { Path } from 'react-native-svg';
 
-// The dashboard mock uses Material Symbols (outlined family). @expo/vector-icons
-// is not installed, so the exact path data is inlined from Google's
-// material-design-icons repo (Apache 2.0). Icons with a `filled` variant switch
-// to it via the `filled` prop — the mock renders the active tab at FILL 1.
+// SVG path data inlined from Google's material-design-icons repo (Apache 2.0).
+// Icons with a `filled` variant switch to it via the `filled` prop.
 type Glyph = {
   outline: string;
   filled?: string;
@@ -39,7 +37,7 @@ const ICONS = {
       'M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z',
   },
   add: { outline: 'M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z' },
-  // The streak flame renders at FILL 1 in the mock, so its fill1 path is the base.
+  // The streak flame renders filled, so its fill1 path is the base.
   flame: {
     outline:
       'M160-400q0-105 50-187t110-138q60-56 110-85.5l50-29.5v132q0 37 25 58.5t56 21.5q17 0 32.5-7t28.5-23l18-22q72 42 116 116.5T800-400q0 88-43 160.5T644-125q17-24 26.5-52.5T680-238q0-40-15-75.5T622-377L480-516 339-377q-29 29-44 64t-15 75q0 32 9.5 60.5T316-125q-70-42-113-114.5T160-400Zm320-4 85 83q17 17 26 38t9 45q0 49-35 83.5T480-120q-50 0-85-34.5T360-238q0-23 9-44.5t26-38.5l85-83Z',
@@ -85,6 +83,12 @@ const ICONS = {
   schedule: {
     outline:
       'm612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z',
+  },
+  notifications: {
+    outline:
+      'M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z',
+    filled:
+      'M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80Z',
   },
   search: {
     outline:
@@ -181,6 +185,16 @@ const ICONS = {
     viewBox: '0 0 24 24',
     outline:
       'M17.75 7L14 3.25l-10 10V17h3.75l10-10zm2.96-2.96c.39-.39.39-1.02 0-1.41L18.37.29c-.39-.39-1.02-.39-1.41 0L15 2.25 18.75 6l1.96-1.96z',
+  },
+  'format-color-text': {
+    viewBox: '0 0 24 24',
+    outline:
+      'M2 20h20v4H2v-4zm3.49-3h2.42l1.27-3.58h5.65L15.11 17h2.42L12.75 4h-1.5L5.49 17zm4.42-5.61l2.03-5.79h.12l2.03 5.79H9.91z',
+  },
+  link: {
+    viewBox: '0 0 24 24',
+    outline:
+      'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
   },
   undo: {
     viewBox: '0 0 24 24',
@@ -300,7 +314,7 @@ const ICONS = {
     viewBox: '0 0 24 24',
     outline: 'M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z',
   },
-  // ── Settings & Data-Privacy screens (see the settings mocks) ──
+  // ── Settings & Data-Privacy screens ──
   'settings-brightness': {
     viewBox: '0 0 24 24',
     outline:

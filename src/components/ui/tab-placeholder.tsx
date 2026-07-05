@@ -13,7 +13,7 @@ type Props = {
   action?: { label: string; onPress: () => void };
 };
 
-/** Friendly centered empty state for screens whose real UI lands in a later phase. */
+/** Friendly centered empty-state placeholder for a screen. */
 export function TabPlaceholder({ icon, title, message, action }: Props) {
   const colors = useTheme();
 

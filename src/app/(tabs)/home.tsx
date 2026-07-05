@@ -3,11 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AchievementCard } from '@/components/home/achievement-card';
 import { DeadlineList } from '@/components/home/deadline-list';
 import { EmptyHint } from '@/components/home/empty-hint';
 import { HomeHeader } from '@/components/home/home-header';
 import { PracticeCard } from '@/components/home/practice-card';
-import { ProgressCard } from '@/components/home/progress-card';
 import { SectionHeader } from '@/components/home/section-header';
 import { StatCards } from '@/components/home/stat-cards';
 import { WeakTopicChips } from '@/components/home/weak-topic-chips';
@@ -18,18 +18,26 @@ import { useTheme } from '@/hooks/use-theme';
 export default function HomeScreen() {
   const colors = useTheme();
   const router = useRouter();
-  const { user, semester, stats, deadlines, weakTopics } = useDashboard();
+  const { user, achievements, stats, deadlines, weakTopics } = useDashboard();
+  // Keep the dashboard calm — preview the first few, send the rest to their own page.
+  const WEAK_PREVIEW = 3;
+  const weakPreview = weakTopics.slice(0, WEAK_PREVIEW);
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
       <StatusBar style="dark" />
       {/* SafeAreaView doesn't support className (Style Exception Rule) → StyleSheet. */}
       <SafeAreaView edges={['top']} style={styles.safe}>
-        <HomeHeader name={user.name} streakDays={user.streakDays} />
+        <HomeHeader
+          name={user.name}
+          streakDays={user.streakDays}
+          onPressBrand={() => router.push('/profile')}
+        />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View className="gap-3">
-            <ProgressCard {...semester} />
+            {/* Non-tappable on the dashboard — the Achievements page opens only from Settings. */}
+            <AchievementCard {...achievements} />
             <StatCards stats={stats} />
           </View>
 
@@ -58,9 +66,13 @@ export default function HomeScreen() {
           </View>
 
           <View className="gap-3">
-            <SectionHeader title="Weak Topics" />
+            <SectionHeader
+              title="Weak Topics"
+              action={weakTopics.length > WEAK_PREVIEW ? 'View all' : undefined}
+              onAction={() => router.push('/weak-topics')}
+            />
             {weakTopics.length > 0 ? (
-              <WeakTopicChips topics={weakTopics} />
+              <WeakTopicChips topics={weakPreview} />
             ) : (
               <EmptyHint
                 icon="quiz"

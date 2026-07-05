@@ -1,16 +1,14 @@
-// "From Your Notes" — the podcast scriptwriter. Turns ONE saved note into a
-// two-host audio conversation the student listens to. Same trust promise as Ask:
-// the script uses ONLY the note's own text — no outside facts, ever.
-//
-// The reader is scoped to a single note, so there is NO retrieval step here — we
-// feed the whole note (its plain-text projection, which already holds any
-// extracted PDF / file text) as the sole source. The model returns strict JSON
-// (title + coverage + alternating A/B turns); we parse it robustly and the store
-// caches it in SQLite keyed by a content hash so a note is only scripted once.
+// "From Your Notes" — turns ONE saved note into a two-host audio conversation,
+// grounded ONLY in the note's text. No retrieval (single-note scope); the model
+// returns strict JSON we parse robustly, cached in SQLite by content hash.
 
 import { HOSTS, type PodcastCoverage, type PodcastTurn } from '@/types/podcast';
 
 import { btlPost, DEFAULT_CHAT_MODEL } from './btl';
+import { hashContent } from './hash';
+
+// Re-exported so existing importers keep working now that hashContent moved to lib/hash.
+export { hashContent };
 
 /** Presenter identities (just names for the ear — never facts from the note). */
 const HOST_A_NAME = HOSTS.A;
@@ -19,11 +17,9 @@ const HOST_B_NAME = HOSTS.B;
 const TARGET_TURNS = 16;
 const TARGET_MINUTES = '2–3';
 
-/** Below this the note is too thin to discuss — return an honest "add more"
- *  episode WITHOUT spending a model call (mirrors Ask's grounding gate). */
+/** Below this the note is too thin to discuss — honest "add more" episode, no model call. */
 const MIN_CONTENT_CHARS = 40;
-/** How much of the note we hand the scriptwriter (~5k tokens). A long note is
- *  clipped, not dropped — the episode still covers the start thoroughly. */
+/** How much of the note the scriptwriter gets (~5k tokens); a long note is clipped. */
 const CONTENT_CHAR_BUDGET = 16000;
 /** Output ceiling — ~16 short turns fit well under this; a thin note uses less. */
 const SCRIPT_MAX_TOKENS = 1600;
@@ -35,8 +31,7 @@ export type EpisodeScript = {
   turns: PodcastTurn[];
 };
 
-// The scriptwriter system prompt — a warm two-host study podcast, grounded ONLY
-// in the note, written for text-to-speech (spoken words, no markdown/brackets).
+// The scriptwriter system prompt.
 const SYSTEM_PROMPT = `You are the scriptwriter for "From Your Notes" — a short AI study podcast inside AI University Companion. You turn ONE student's saved note into a two-host audio conversation that the student LISTENS to (they never speak) to understand the material better.
 
 THE TWO HOSTS
@@ -83,20 +78,6 @@ ${content}
 
 type ChatCompletion = { choices?: { message?: { content?: string } }[] };
 
-/**
- * Deterministic hash of the note text (djb2 → base36). The cache key so an
- * episode is only regenerated when the note's content actually changes. Not
- * cryptographic — just a stable fingerprint.
- */
-export function hashContent(text: string): string {
-  let hash = 5381;
-  for (let i = 0; i < text.length; i += 1) {
-    hash = (hash * 33) ^ text.charCodeAt(i);
-  }
-  // >>> 0 keeps it an unsigned 32-bit int so the base36 string is stable.
-  return (hash >>> 0).toString(36);
-}
-
 /** Pull the JSON object out of a model reply, tolerating ```json fences or stray
  *  prose around it. Returns null if nothing parseable is found. */
 function parseScript(raw: string): EpisodeScript | null {
@@ -128,8 +109,7 @@ function parseScript(raw: string): EpisodeScript | null {
   return { title, coverage, turns };
 }
 
-/** The honest, credit-free episode for a note with almost nothing in it yet: the
- *  hosts say it's only a few lines and nudge the student to add more. */
+/** The honest, credit-free episode for a near-empty note: hosts nudge to add more. */
 function thinNoteEpisode(title: string): EpisodeScript {
   const topic = title.trim() || 'this note';
   return {
@@ -155,14 +135,8 @@ function thinNoteEpisode(title: string): EpisodeScript {
   };
 }
 
-/**
- * Write a grounded episode script from a saved note. Uses ONLY the note's own
- * text. A near-empty note short-circuits to an honest "add more" episode with no
- * model call; otherwise it asks the BTL runtime for strict JSON and parses it.
- * Throws a BtlError on a runtime failure (the caller shows `.friendly`); a
- * successful-but-unparseable reply falls back to the thin-note episode rather
- * than surfacing a raw error.
- */
+/** Write a grounded episode script from a note (ONLY its text). Near-empty notes
+ *  short-circuit to the thin-note episode; unparseable replies do too. Throws BtlError. */
 export async function generateEpisodeScript(note: {
   title: string;
   subject: string | null;
@@ -176,10 +150,7 @@ export async function generateEpisodeScript(note: {
   const clipped =
     content.length > CONTENT_CHAR_BUDGET ? `${content.slice(0, CONTENT_CHAR_BUDGET)}…` : content;
 
-  // We rely on the prompt's "return ONLY valid JSON" instruction plus the robust
-  // parser below — NOT on a `response_format`/JSON-mode field, which is unverified
-  // on this gateway and could 400 (a strict gateway rejects unknown fields). This
-  // keeps the request to the plain chat shape btl-2 is proven to accept.
+  // Plain chat + robust parser, not a `response_format` field (unverified here, could 400).
   const res = await btlPost<ChatCompletion>('chat/completions', {
     model: DEFAULT_CHAT_MODEL,
     temperature: 0.6, // warmer than Ask — the hosts should sound alive, not clinical

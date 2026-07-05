@@ -21,10 +21,7 @@ type Props = {
   onPreview: () => void;
 };
 
-/** One host in the voice picker, laid out like an Ask-chat turn: Maya (A) sits on
- *  the RIGHT in a filled indigo bubble (like the student's message), Leo (B) on the
- *  LEFT in a white bubble (like noteIQ's reply). The bubble "speaks" the host's
- *  sample line and names the chosen voice; the option rows below switch it. */
+/** One host in the voice picker: a chat-style preview bubble plus its voice option rows. */
 export function VoiceHostSection({ speaker, role, voices, selectedId, onSelect, onPreview }: Props) {
   const colors = useTheme();
   const accent = hostAccent(colors, speaker);

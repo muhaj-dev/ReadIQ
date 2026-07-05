@@ -1,16 +1,5 @@
-/**
- * Tiny className helper for NativeWind.
- *
- * Accepts strings, numbers, arrays, and conditional `{ 'class': boolean }` maps,
- * drops falsy values, and joins the rest with a space. Use it to compose
- * conditional Tailwind classes cleanly:
- *
- *   <View className={cn('flex-1 px-5', isActive && 'bg-accent', { 'opacity-50': disabled })} />
- *
- * NativeWind resolves conflicting utilities by source order, so the layout /
- * spacing classes this app uses don't need `tailwind-merge`. Keep colours in
- * `useTheme()` — this helper is for layout classes only.
- */
+/** Tiny className helper for NativeWind: joins truthy strings/arrays/`{class: bool}` maps.
+ *  Layout classes only — keep colours in `useTheme()`. */
 export type ClassValue =
   | string
   | number

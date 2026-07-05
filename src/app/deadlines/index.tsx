@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AddFab } from '@/components/deadlines/add-fab';
@@ -8,13 +8,29 @@ import { CalendarGrid } from '@/components/deadlines/calendar-grid';
 import { DeadlinesHeader } from '@/components/deadlines/deadlines-header';
 import { MonthSwitcher } from '@/components/deadlines/month-switcher';
 import { UpcomingList } from '@/components/deadlines/upcoming-list';
-import { deadlinesMonth, upcomingDeadlines } from '@/data/deadlines';
+import { EmptyHint } from '@/components/home/empty-hint';
+import { markedDaysInMonth, monthView, toUpcoming } from '@/lib/deadline-view';
 import { useTheme } from '@/hooks/use-theme';
+import { useDeadlinesStore } from '@/store/use-deadlines-store';
 
-/** DEADLINES — month calendar + upcoming list. Content is static until the store lands. */
+/** DEADLINES — current-month calendar (deadline days dotted) + upcoming list. */
 export default function DeadlinesScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const deadlines = useDeadlinesStore((s) => s.deadlines);
+  const toggleReminder = useDeadlinesStore((s) => s.toggleReminder);
+  const removeDeadline = useDeadlinesStore((s) => s.removeDeadline);
+
+  const month = monthView();
+  const marked = markedDaysInMonth(deadlines, month.year, month.monthIndex);
+
+  const confirmDelete = (id: string) => {
+    const target = deadlines.find((d) => d.id === id);
+    Alert.alert('Delete deadline', `Remove “${target?.title ?? 'this deadline'}”?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => removeDeadline(id) },
+    ]);
+  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
@@ -25,15 +41,30 @@ export default function DeadlinesScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View className="gap-4">
-            <MonthSwitcher label={deadlinesMonth.label} />
+            <MonthSwitcher label={month.label} />
             <CalendarGrid
-              year={deadlinesMonth.year}
-              monthIndex={deadlinesMonth.monthIndex}
-              selectedDay={deadlinesMonth.selectedDay}
+              year={month.year}
+              monthIndex={month.monthIndex}
+              selectedDay={month.today}
+              markedDays={marked}
             />
           </View>
 
-          <UpcomingList deadlines={upcomingDeadlines} />
+          {deadlines.length > 0 ? (
+            <UpcomingList
+              deadlines={deadlines.map((d) => toUpcoming(d))}
+              onToggleReminder={toggleReminder}
+              onDelete={confirmDelete}
+            />
+          ) : (
+            <EmptyHint
+              icon="schedule"
+              title="No deadlines yet"
+              subtitle="Add your exam and assignment dates to see them counted down here."
+              cta="Add your first deadline"
+              onPress={() => router.push('/deadlines/add')}
+            />
+          )}
         </ScrollView>
 
         <AddFab onPress={() => router.push('/deadlines/add')} />

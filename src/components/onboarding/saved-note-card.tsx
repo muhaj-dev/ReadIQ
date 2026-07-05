@@ -12,10 +12,7 @@ type Props = {
   title?: string;
 };
 
-/**
- * The "note landing in memory" preview on First Note: a downward arrow into a
- * saved-note card with a green check. Fades in once the student has typed.
- */
+/** "Note landing in memory" preview: arrow into a saved-note card, fades in. */
 export function SavedNoteCard({ text, title }: Props) {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   const displayTitle = title?.trim() ? title.trim() : deriveTitle(text);

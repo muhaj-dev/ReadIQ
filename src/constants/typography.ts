@@ -1,8 +1,5 @@
-// src/constants/typography.ts
-// Font families from the design mocks (see each mock's <head> fonts):
-//   headings / display → Manrope · body / labels → Hanken Grotesk
-// Loaded in app/_layout.tsx via useFonts. Each weight is its own family name —
-// never pair these with fontWeight, or Android falls back to the system font.
+// Font families from the design mocks: Manrope (headings) · Hanken Grotesk (body).
+// Each weight is its own family — never pair with fontWeight, or Android falls back to system font.
 
 export const fonts = {
   // Headlines & display — Manrope

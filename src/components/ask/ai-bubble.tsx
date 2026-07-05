@@ -15,14 +15,11 @@ type Props = {
   streaming?: boolean;
   /** This bubble holds a friendly runtime-error message, not an answer. */
   error?: boolean;
-  /** This answer is from general knowledge, OUTSIDE the notes — show the distinct
-   *  "Beyond your notes" header instead of the trusted "noteIQ" label. */
+  /** Answer from outside the notes — shows the distinct "Beyond your notes" header. */
   beyond?: boolean;
 };
 
-/** Left-aligned card holding noteIQ's answer (streams in, or shows the fallback).
- *  A "beyond your notes" answer sits on a distinct blue well so it never reads as
- *  the trusted "from your notes" reply above it. */
+/** Left-aligned card holding noteIQ's answer; "beyond" answers use a distinct blue well. */
 export function AiBubble({ text, time, streaming, error, beyond }: Props) {
   const colors = useTheme();
   const waiting = streaming && text.length === 0;
@@ -38,7 +35,7 @@ export function AiBubble({ text, time, streaming, error, beyond }: Props) {
         </View>
       ) : (
         <Text className="mb-1 ml-1" style={[styles.sender, { color: colors.primary }]}>
-          noteIQ
+          readIQ
         </Text>
       )}
       <View

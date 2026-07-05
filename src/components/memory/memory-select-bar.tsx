@@ -13,9 +13,7 @@ type Props = {
   onDelete: () => void;
 };
 
-/** The bottom bar shown while selecting notes in the Memory Panel: a live count
- *  plus Share and Delete. Both actions are disabled until at least one note is
- *  ticked, so the student can't fire an empty action. */
+/** Select-mode bottom bar: live count + Share/Delete (disabled until a note is ticked). */
 export function MemorySelectBar({ count, onShare, onDelete }: Props) {
   const colors = useTheme();
   const disabled = count === 0;
@@ -24,7 +22,6 @@ export function MemorySelectBar({ count, onShare, onDelete }: Props) {
     <View
       className="flex-row items-center pb-4 pt-3"
       style={{ backgroundColor: colors.surface, borderTopColor: withAlpha(colors.outlineVariant, 0.2), borderTopWidth: 1 }}>
-      {/* Count + Share sit on the left. */}
       <View className="flex-1 flex-row items-center gap-4 pl-5">
         <Text style={[styles.count, { color: colors.onSurfaceVariant }]}>
           {count === 0 ? 'Select notes' : `${count} selected`}
@@ -40,9 +37,7 @@ export function MemorySelectBar({ count, onShare, onDelete }: Props) {
         />
       </View>
 
-      {/* Delete floats directly above the Memory tab. The tab bar lays out 5 slots
-          with justify-around, so Memory's centre is at 70% of the width; -28 (half
-          the 56px button) re-centres the button on that point. */}
+      {/* Delete sits above the Memory tab: 70% width, -28 to re-centre the 56px button. */}
       <View style={styles.deleteSlot}>
         <Action
           icon="delete"

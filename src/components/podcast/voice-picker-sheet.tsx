@@ -14,9 +14,7 @@ import { VoiceHostSection } from './voice-host-section';
 
 type Props = { visible: boolean; onClose: () => void };
 
-/** The "Podcast voices" bottom sheet: pick a device voice for each host (tapping a
- *  voice previews it aloud) and set the speaking speed. Choices persist via the
- *  podcast voice store; the player picks them up on the next play. */
+/** "Podcast voices" bottom sheet: pick a device voice per host and the speaking speed. */
 export function VoicePickerSheet({ visible, onClose }: Props) {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
@@ -46,8 +44,7 @@ export function VoicePickerSheet({ visible, onClose }: Props) {
     [setVoice, prefs.rate],
   );
 
-  // Replay a host's current voice when its chat bubble is tapped (no-op if the
-  // host is on the system default, which has no id to preview).
+  // Replay a host's current voice on bubble tap; no-op on the system default (no id).
   const preview = useCallback(
     (speaker: PodcastSpeaker) => {
       const id = prefs[speaker];

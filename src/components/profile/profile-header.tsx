@@ -10,18 +10,22 @@ import { withAlpha } from '@/lib/color';
 
 type Props = {
   name: string;
-  /** Secondary line under the name — the student's study goal. Hidden if empty. */
-  subtitle: string;
+  /** Contact email shown under the name. Hidden if empty. */
+  email: string;
+  /** The student's study goal, shown under the email. Hidden if empty. */
+  goal: string;
   role: string;
+  /** Opens the inline edit form (avatar badge + name pencil). */
+  onEdit?: () => void;
 };
 
-/** Identity block: avatar with edit badge, name, goal, and the course chip. */
-export function ProfileHeader({ name, subtitle, role }: Props) {
+/** Identity block: avatar with edit badge, name, email, goal, and the course chip. */
+export function ProfileHeader({ name, email, goal, role, onEdit }: Props) {
   const colors = useTheme();
 
   return (
     <View className="items-center">
-      {/* Avatar — the noteIQ mark in a soft double ring, per the mock. */}
+      {/* Avatar — the noteIQ mark in a soft double ring. */}
       <View className="mb-6">
         <View
           className="h-32 w-32 rounded-pill border-4 p-1"
@@ -40,11 +44,12 @@ export function ProfileHeader({ name, subtitle, role }: Props) {
             />
           </View>
         </View>
-        {/* Photo editing lands with useUserStore (Phase 9). */}
+        {/* Edit badge → opens the inline profile editor. */}
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Edit photo"
+          accessibilityLabel="Edit profile"
           activeOpacity={0.8}
+          onPress={onEdit}
           className="absolute bottom-1 right-1 h-8 w-8 items-center justify-center rounded-pill border-2"
           style={[
             styles.editBadge,
@@ -58,17 +63,25 @@ export function ProfileHeader({ name, subtitle, role }: Props) {
         </TouchableOpacity>
       </View>
 
-      <View className="mb-1 flex-row items-center gap-2">
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Edit name"
+        activeOpacity={0.7}
+        onPress={onEdit}
+        className="mb-1 flex-row items-center gap-2">
+        {/* Spacer mirrors the pencil so the name stays truly centered. */}
+        <View className="w-5" />
         <Text style={[styles.name, { color: colors.onPrimary }]}>{name}</Text>
         <AppIcon name="edit" size={20} color={withAlpha(colors.onPrimarySoft, 0.6)} />
-      </View>
-      {subtitle ? (
-        <Text className="mb-4" style={[styles.email, { color: colors.onPrimarySoft }]}>
-          {subtitle}
+      </TouchableOpacity>
+      {email ? (
+        <Text className={goal ? 'mb-1' : 'mb-4'} style={[styles.email, { color: colors.onPrimarySoft }]}>
+          {email}
         </Text>
-      ) : (
+      ) : !goal ? (
         <View className="mb-4" />
-      )}
+      ) : null}
+      
 
       <GlassCard className="rounded-pill px-4 py-1.5">
         <Text style={[styles.role, { color: colors.onPrimary }]}>{role}</Text>
@@ -96,6 +109,11 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 16,
     lineHeight: 24,
+    fontFamily: fonts.bodyRegular,
+  },
+  goal: {
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: fonts.bodyRegular,
   },
   role: {

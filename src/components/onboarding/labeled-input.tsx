@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Onboard } from '@/constants/theme';
 import { fonts } from '@/constants/typography';
@@ -11,13 +11,22 @@ type Props = {
   onChangeText: (text: string) => void;
   /** Show an accent asterisk marking the field as required. */
   required?: boolean;
+  /** Keyboard variant — e.g. "email-address" for the email field. */
+  keyboardType?: TextInputProps['keyboardType'];
+  /** Auto-capitalization — "none" for emails. */
+  autoCapitalize?: TextInputProps['autoCapitalize'];
 };
 
-/**
- * "Tell us about you" form field: label + soft-filled input that lifts to a
- * white background with an indigo border while focused (per the mockup).
- */
-export function LabeledInput({ label, value, placeholder, onChangeText, required }: Props) {
+/** "Tell us about you" form field: label + input that lifts on focus. */
+export function LabeledInput({
+  label,
+  value,
+  placeholder,
+  onChangeText,
+  required,
+  keyboardType,
+  autoCapitalize,
+}: Props) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -32,6 +41,8 @@ export function LabeledInput({ label, value, placeholder, onChangeText, required
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={Onboard.outlineVariant}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={[styles.input, focused && styles.inputFocused]}

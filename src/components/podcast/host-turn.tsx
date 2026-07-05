@@ -16,12 +16,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** One turn of the two-host conversation, laid out like the Ask chat: the FIRST
- *  voice — Maya (A) — sits on the RIGHT in a filled indigo bubble (like the
- *  student's message); the second — Leo (B) — on the LEFT in a white bubble (like
- *  noteIQ's reply). The turn the voice is CURRENTLY reading pops out — lifted with a
- *  shadow, an accent ring, a gentle scale, and a 🎧 cue — so the student always sees
- *  which line is being spoken; the rest stay calm and flat. */
+/** One turn of the two-host conversation as a chat bubble; the active turn pops out. */
 export function HostTurn({ speaker, name, text, active, onPress }: Props) {
   const colors = useTheme();
   const accent = hostAccent(colors, speaker);
@@ -29,16 +24,12 @@ export function HostTurn({ speaker, name, text, active, onPress }: Props) {
 
   const bubbleColor = right ? colors.secondaryContainer : colors.surfaceLowest;
   const textColor = right ? colors.onPrimary : active ? colors.onSurface : colors.onSurfaceVariant;
-  // No borders anywhere — turns read apart through fill + size + shadow alone. The turn
-  // being read pops out purely by growing; every bubble stays clean and outline-free.
-  // The white (left) bubble grows more gently than the indigo (right) one so its lighter
-  // fill doesn't feel oversized when active.
+  // The white (left) bubble grows more gently than the indigo (right) one when active.
   const activeScale = right ? 1.14 : 1.09;
 
   return (
     <View className={right ? 'items-end' : 'items-start'}>
-      {/* Sender chip: avatar initial + name, mirrored to the bubble's side, with a
-          headphones cue on the turn being read aloud. */}
+      {/* Sender chip: avatar initial + name, with a headphones cue on the active turn. */}
       <View className={`mb-1 flex-row items-center gap-1.5 px-1 ${right ? 'flex-row-reverse' : ''}`}>
         <View
           className="h-5 w-5 items-center justify-center rounded-pill"
@@ -62,11 +53,7 @@ export function HostTurn({ speaker, name, text, active, onPress }: Props) {
           {
             backgroundColor: bubbleColor,
             shadowColor: colors.shadow,
-            // Always an array (never undefined) — a null transform crashes
-            // processTransform on the New Architecture. The active turn grows large so
-            // it clearly lifts off the thread; idle turns sit at their natural size.
-            // Anchored to the sender's edge so the bigger bubble grows inward instead
-            // of clipping off its own side of the screen.
+            // Always an array — a null transform crashes processTransform on the New Architecture; anchor to the sender's edge so it grows inward.
             transform: [{ scale: active ? activeScale : 1 }],
             transformOrigin: right ? 'right center' : 'left center',
           },
@@ -78,8 +65,7 @@ export function HostTurn({ speaker, name, text, active, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // A shrink-to-fit chat bubble with a small "tail" on the sender's side. No
-  // border — the fill, size, and shadow carry the whole look.
+  // Shrink-to-fit chat bubble with a small "tail" on the sender's side.
   tailLeft: {
     borderTopLeftRadius: 4,
   },
@@ -114,8 +100,7 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontFamily: fonts.bodyRegular,
   },
-  // The turn being read aloud gets a few extra px so it's easy to follow along;
-  // combined with the 1.14 bubble scale it reads clearly larger than the thread.
+  // The active turn gets a few extra px so it reads larger than the thread.
   textActive: {
     fontSize: 18,
     lineHeight: 27,

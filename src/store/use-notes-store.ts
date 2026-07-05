@@ -1,6 +1,4 @@
-// The Memory store — every saved note, loaded from SQLite and kept in sync.
-// This is the client-side source of truth the Memory Panel, Note Details, and
-// (later) retrieval read from.
+// Memory store: every saved note from SQLite — the client-side source of truth.
 
 import { create } from 'zustand';
 
@@ -57,6 +55,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       // Reader annotations start empty; they're derived on first highlight/comment.
       readerHtml: null,
       comments: [],
+      pdfAnnotations: null,
       aiSummary: input.aiSummary ?? null,
       createdAt: new Date().toISOString(),
     };
@@ -73,9 +72,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   updateNote: async (id, patch) => {
     const current = get().notes.find((n) => n.id === id);
     if (!current) return;
-    // Editing the note's text (an Edit-screen save that carries contentHtml, not
-    // readerHtml) re-anchors nothing — the old highlights/comments pointed at the
-    // previous HTML — so clear them and let the reader re-derive from fresh text.
+    // Editing note text invalidates highlights/comments (they anchored to old HTML) — clear them.
     const contentEdited = patch.contentHtml !== undefined && patch.readerHtml === undefined;
     const next: Note = {
       ...current,
@@ -91,8 +88,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
           ? patch.readerHtml
           : current.readerHtml,
       comments: contentEdited ? [] : patch.comments ?? current.comments,
-      // The AI summary isn't a column in db.updateNote, so SQLite keeps its value
-      // across edits — mirror that here (a patch may still override it explicitly).
+      // PDF annotations anchor to the PDF pages, not the note text — they survive text edits.
+      pdfAnnotations:
+        patch.pdfAnnotations !== undefined ? patch.pdfAnnotations : current.pdfAnnotations,
+      // db.updateNote has no summary column, so SQLite keeps it across edits — mirror that.
       aiSummary: patch.aiSummary !== undefined ? patch.aiSummary : current.aiSummary,
     };
     try {
@@ -105,6 +104,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         attachments: next.attachments,
         readerHtml: next.readerHtml,
         comments: next.comments,
+        pdfAnnotations: next.pdfAnnotations,
       });
     } catch (err) {
       console.warn('[notes] failed to update note', err);

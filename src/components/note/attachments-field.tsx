@@ -14,8 +14,7 @@ type Props = {
   onRemove: (id: string) => void;
 };
 
-/** The note's Attachments section: a removable card per image/file, plus
- *  "Add image" and "Add file" actions (both support picking several at once). */
+/** Attachments section: removable cards plus Add image / Add file actions. */
 export function AttachmentsField({ attachments, onAdd, onRemove }: Props) {
   const colors = useTheme();
 

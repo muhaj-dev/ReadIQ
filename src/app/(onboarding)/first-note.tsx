@@ -17,8 +17,7 @@ import { useOnboardingStore } from '@/store/use-onboarding-store';
 
 const HOME: Href = '/home';
 
-/** Onboarding 3/3 — the magic first note, named and saved to memory, then
- *  handed off to the note's own details page. */
+/** Onboarding 3/3 — the first note, saved to memory, then hands off to its details page. */
 export default function FirstNoteScreen() {
   const router = useRouter();
   const addNote = useNotesStore((s) => s.addNote);
@@ -28,8 +27,7 @@ export default function FirstNoteScreen() {
   const hasNote = note.trim().length > 0;
 
   const finish = async () => {
-    // Reaching the end of onboarding (with or without a note) means we never
-    // show it again — the splash will route straight to Home next launch.
+    // Reaching the end of onboarding means we never show it again.
     completeOnboarding();
     if (!hasNote) {
       router.replace(HOME);
@@ -40,8 +38,7 @@ export default function FirstNoteScreen() {
       content: note.trim(),
       source: 'paste',
     });
-    // Show the saved note's details (read live from the Memory store). Its back
-    // chevron falls through to the Memory tab — onboarding is left behind.
+    // Show the saved note's details; its back chevron falls through to the Memory tab.
     router.replace({ pathname: '/note/[id]', params: { id: saved.id } });
   };
 

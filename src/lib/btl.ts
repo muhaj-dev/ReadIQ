@@ -1,27 +1,12 @@
-// The single BTL Runtime client.
-//
-// This is the ONLY file in the app that reads the BTL credentials or knows the
-// gateway URL. Every AI feature — grounded Ask (chat), embeddings + retrieval,
-// scan OCR, class-recording transcription, and quiz generation — talks to the
-// runtime through the helpers here.
-//
-// The BTL runtime is OpenAI-compatible, so we call it with plain `fetch` against
-// the standard /v1 JSON routes. That means NO extra `openai` package dependency:
-// "no openai dep" is about HOW we call the gateway (fetch vs the SDK), not
-// WHETHER we use it — 100% of AI still flows through BTL. Using fetch keeps the
-// bundle small and avoids the Node-oriented SDK's polyfill needs on React Native.
-//
-// Streaming (grounded Ask) uses `expo/fetch` instead of the global fetch: only it
-// exposes a readable `response.body` on React Native so tokens can render as they
-// arrive. The global fetch (used everywhere else) buffers the whole body first.
+// The single BTL Runtime client — the only file that reads BTL credentials.
+// OpenAI-compatible; called via plain fetch, streaming via expo/fetch.
 
 import { fetch as streamingFetch } from 'expo/fetch';
 
 // --- Credentials (read here and NOWHERE else — see AGENTS.md → BTL Runtime Rules)
 
 const API_KEY = process.env.EXPO_PUBLIC_BTL_API_KEY ?? '';
-// Normalise the base URL so `${BASE_URL}/chat/completions` is always clean, even
-// if the .env value has a trailing slash. Expected to already include `/v1`.
+// Strip trailing slash; expected to already include `/v1`.
 const BASE_URL = (process.env.EXPO_PUBLIC_BTL_BASE_URL ?? '').replace(/\/+$/, '');
 
 /** True only when both the scoped key and base URL are present in .env. */
@@ -30,26 +15,25 @@ export function isBtlConfigured(): boolean {
 }
 
 // --- Models -----------------------------------------------------------------
-// Chat / OCR / quiz models become user-selectable in Settings → AI Model and are
-// passed to helpers as an override. `btl-2` is the confirmed default from the
-// BTL dashboard. Vision (scan/OCR) and audio (record) reuse `/chat/completions`
-// with a vision/audio model id — the gateway exposes no separate OCR endpoint.
+// Confirmed default from the BTL dashboard; user-selectable later in Settings.
 export const DEFAULT_CHAT_MODEL = 'btl-2';
 
-// Document / vision model for reading uploaded PDFs (and, later, scanned pages).
-// Gemini reads a PDF natively through the OpenAI-compatible `file` content part,
-// so upload extraction routes here. Becomes user-selectable in Settings like the
-// chat model. Swap the slug if the catalog names its document model differently.
+// Vision/document model — reads uploaded PDFs via an `image_url` data-URI content
+// part (the same proven gateway path as scan OCR; the `file` part is dropped by BTL).
 export const DEFAULT_DOC_MODEL = 'gemini-2.5-flash';
 
-// NOTE: the BTL catalog surfaced NO dedicated text-embedding model. So there is
-// intentionally no EMBED_MODEL here — Phase 3 grounds retrieval lexically
-// (keyword / chunk-overlap). The trust promise is kept by the retrieval GATE +
-// citations, not by vectors. Revisit only if an embedding model appears in /models.
+// Vision model for scan OCR — a multimodal chat model reads the photo via an
+// `image_url` content part (the same gateway path proven for DEFAULT_DOC_MODEL).
+export const DEFAULT_VISION_MODEL = 'gemini-2.5-flash';
+
+// No audio model: BTL has no working transcription path (verified —
+// /audio/transcriptions 404s, gpt-audio 400s, voxtral's 32k context = ~1s of audio).
+// Record transcription runs through OpenAI Whisper instead (see lib/transcription.ts).
+
+// No EMBED_MODEL: catalog has no text-embedding model, so retrieval is lexical.
 
 // --- Friendly errors --------------------------------------------------------
-// Screens must never show a raw stack trace. Every failure is mapped to a calm,
-// student-facing sentence (see AGENTS.md → UI Quality Bar / BTL Rules Summary).
+// Every failure maps to a calm, student-facing sentence — never a raw trace.
 
 export type BtlErrorKind = 'not-configured' | 'network' | 'auth' | 'credits' | 'server' | 'unknown';
 
@@ -88,12 +72,7 @@ function kindForStatus(status: number): BtlErrorKind {
 
 type JsonBody = Record<string, unknown>;
 
-/**
- * POST a JSON body to a BTL /v1 route (e.g. 'chat/completions', 'embeddings')
- * and return the parsed response. This is the primitive every non-streaming AI
- * helper builds on. Streaming chat (Phase 4) reads `res.body` instead, but reuses
- * the same headers and error mapping. Throws a {@link BtlError} on any failure.
- */
+/** POST a JSON body to a BTL /v1 route and return the parsed response. Throws {@link BtlError}. */
 export async function btlPost<T = unknown>(
   path: string,
   body: JsonBody,
@@ -125,28 +104,40 @@ export async function btlPost<T = unknown>(
   return (await res.json()) as T;
 }
 
+// --- Response text extraction ------------------------------------------------
+// A vision/audio/chat reply may arrive as a plain string, a content-part array,
+// or the /responses `output` shape — read all of them so a shape mismatch never
+// looks like "the model returned nothing".
+
+type ChatContentPart = { type?: string; text?: string };
+type ChatLike = {
+  choices?: { message?: { content?: string | ChatContentPart[] } }[];
+  output_text?: string;
+  output?: { content?: ChatContentPart[] }[];
+};
+
+/** Pull the assistant text out of whatever shape the gateway returned. '' when none. */
+export function readChatText(res: unknown): string {
+  const r = (res ?? {}) as ChatLike;
+  const join = (parts: ChatContentPart[]) =>
+    parts.map((p) => (typeof p?.text === 'string' ? p.text : '')).join('').trim();
+  const message = r.choices?.[0]?.message?.content;
+  if (typeof message === 'string') return message.trim();
+  if (Array.isArray(message)) return join(message);
+  if (typeof r.output_text === 'string') return r.output_text.trim();
+  const output = r.output?.[0]?.content;
+  if (Array.isArray(output)) return join(output);
+  return '';
+}
+
 // --- Streaming chat ---------------------------------------------------------
 
-/** The outcome of a streamed completion: the full text, WHY it stopped, and how
- *  many content deltas arrived. `finishReason` is unreliable on some gateways
- *  (btl-2 reports 'stop' even when cut off), so callers also use `tokens` — which
- *  tracks the emitted token count (~1 per delta) — against `max_tokens` to detect
- *  a truncated answer and offer "Generate more". */
+/** Streamed completion outcome. `finishReason` is unreliable on btl-2, so `tokens`
+ *  (~1 per delta) vs `max_tokens` also flags truncation for "Generate more". */
 export type StreamResult = { text: string; finishReason: string | null; tokens: number };
 
-/**
- * Stream a chat completion from the BTL runtime, invoking `onToken` with each
- * text delta as it arrives and resolving to the full concatenated answer plus its
- * finish reason. This powers the grounded Ask ★ hero moment — the answer types
- * itself out live.
- *
- * `body` is the OpenAI-compatible request MINUS `stream` (we always set it). The
- * gateway replies with Server-Sent Events (`data: {json}\n\n`, ending in
- * `data: [DONE]`); we parse the `choices[0].delta.content` off each event and
- * keep the last `choices[0].finish_reason` we see. Same auth headers and
- * friendly-error mapping as {@link btlPost}: any failure throws a {@link BtlError}
- * the UI can render calmly.
- */
+/** Stream a chat completion, calling `onToken` per delta; resolves to the full answer.
+ *  `body` omits `stream` (always set here). Throws {@link BtlError} on failure. */
 export async function btlChatStream(
   body: JsonBody,
   onToken?: (delta: string) => void,
@@ -187,8 +178,7 @@ export async function btlChatStream(
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      // SSE events are newline-delimited; process every complete line, keeping
-      // any trailing partial line in the buffer for the next chunk.
+      // SSE events are newline-delimited; keep any partial trailing line buffered.
       let nl: number;
       while ((nl = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, nl).trim();
@@ -206,8 +196,7 @@ export async function btlChatStream(
             tokens += 1; // ~1 token per delta on btl-2 — a truncation proxy
             onToken?.(delta);
           }
-          // The last event of a completion carries the reason it stopped
-          // ('stop' = finished, 'length' = hit max_tokens → more to say).
+          // 'stop' = finished, 'length' = hit max_tokens → more to say.
           const reason = json.choices?.[0]?.finish_reason;
           if (reason) finishReason = reason;
         } catch {
@@ -216,8 +205,7 @@ export async function btlChatStream(
       }
     }
   } catch (err) {
-    // A mid-stream transport drop (or an abort). Surface as a friendly network
-    // error unless the caller aborted on purpose.
+    // Mid-stream drop: friendly network error unless the caller aborted on purpose.
     if (signal?.aborted) return { text: full, finishReason, tokens };
     throw new BtlError('network', String(err));
   }
@@ -229,12 +217,7 @@ export async function btlChatStream(
 
 export type BtlStatus = { ok: boolean; message: string };
 
-/**
- * The one cheap health check: GET /models lists the gateway's models without
- * spending any generation tokens. Use it on app start or Settings → AI Model to
- * show a calm "connected / not connected" state. Never throws — it always
- * resolves to a status the UI can render directly.
- */
+/** Cheap health check via GET /models (no tokens spent). Never throws. */
 export async function checkBtlConnection(signal?: AbortSignal): Promise<BtlStatus> {
   if (!isBtlConfigured()) return { ok: false, message: FRIENDLY['not-configured'] };
 

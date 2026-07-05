@@ -1,6 +1,4 @@
-// Static Deadlines content matching the design mocks. Real values arrive with
-// useDeadlinesStore + SQLite in a later pass — the screens are UI-first, like
-// the dashboard and memory panel.
+// Shared Deadlines view shapes + the Add-form picker option lists.
 
 import type { SheetOption } from '@/components/form/option-sheet';
 
@@ -14,6 +12,8 @@ export type UpcomingDeadline = {
   /** "Due today" / "1 day left" / "3 days left" */
   status: string;
   urgency: DeadlineUrgency;
+  /** Whether the student set a reminder — shows a bell on the card. */
+  reminderOn: boolean;
 };
 
 export type CalendarCell = {
@@ -36,45 +36,16 @@ export function buildMonthCells(year: number, monthIndex: number): CalendarCell[
   });
 }
 
-export const deadlinesMonth = {
-  label: 'May 2026',
-  year: 2026,
-  monthIndex: 4,
-  selectedDay: 20,
-};
-
-export const upcomingDeadlines: UpcomingDeadline[] = [
-  {
-    id: 'physics-lab',
-    title: 'Physics Lab Report',
-    when: 'May 20, 2026 • 11:59 PM',
-    status: 'Due today',
-    urgency: 'today',
-  },
-  {
-    id: 'calculus-quiz',
-    title: 'Calculus Quiz',
-    when: 'May 21, 2026 • 10:00 AM',
-    status: '1 day left',
-    urgency: 'soon',
-  },
-  {
-    id: 'algorithms-assignment',
-    title: 'Algorithms Assignment',
-    when: 'May 23, 2026 • 11:59 PM',
-    status: '3 days left',
-    urgency: 'later',
-  },
-];
-
 // ── Add Deadline form ──
 
 export type DeadlineDraft = {
   title: string;
   subject: string;
   type: string;
-  date: string;
-  time: string;
+  /** Local "YYYY-MM-DD" (the picker's value). */
+  dateValue: string;
+  /** 24h "HH:MM" (the picker's value). */
+  timeValue: string;
   reminder: string;
   repeat: string;
   notes: string;
@@ -82,21 +53,24 @@ export type DeadlineDraft = {
   colorIndex: number;
 };
 
-/** Seeded with the mock's values until useDeadlinesStore lands. */
-export const initialDraft: DeadlineDraft = {
-  title: 'Biochemistry Exam',
-  subject: 'Biochemistry',
-  type: 'Exam',
-  date: 'May 28, 2026',
-  time: '09:00 AM',
-  reminder: '1 day before',
-  repeat: "Don't repeat",
-  notes: 'Bring calculator and formula sheet',
-  colorIndex: 5,
-};
+/** A blank draft for a new deadline; `dateValue` comes from the caller. */
+export function createEmptyDraft(dateValue: string): DeadlineDraft {
+  return {
+    title: '',
+    subject: 'General',
+    type: 'Exam',
+    dateValue,
+    timeValue: '23:59',
+    reminder: '1 day before',
+    repeat: "Don't repeat",
+    notes: '',
+    colorIndex: 0,
+  };
+}
 
 export const pickerOptions: Record<'subject' | 'type' | 'reminder' | 'repeat', SheetOption[]> = {
   subject: [
+    { label: 'General' },
     { label: 'Biochemistry' },
     { label: 'Physics' },
     { label: 'Calculus' },

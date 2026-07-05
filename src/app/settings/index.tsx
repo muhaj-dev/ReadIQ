@@ -10,8 +10,7 @@ import { SettingsSection } from '@/components/settings/settings-section';
 import { settingsSections } from '@/data/settings';
 import { useTheme } from '@/hooks/use-theme';
 
-/** SETTINGS — grouped preference rows per the settings mock. Values become
- *  live once useSettingsStore lands (Phase 9); only Data & Privacy navigates. */
+/** SETTINGS — grouped preference rows; only Data & Privacy navigates. */
 export default function SettingsScreen() {
   const colors = useTheme();
   const router = useRouter();

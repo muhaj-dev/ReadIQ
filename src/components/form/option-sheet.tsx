@@ -36,11 +36,7 @@ type Props = {
   addLabel?: string;
 };
 
-/**
- * Bottom-sheet picker (see the reminder-selection mock): dimmed backdrop,
- * rounded top sheet, Cancel header, one row per option with a check on the
- * selected one. "Chevron" options (Custom) are visual-only for now.
- */
+/** Bottom-sheet option picker with a check on the selected row. */
 export function OptionSheet({
   visible,
   options,

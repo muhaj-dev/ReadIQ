@@ -9,8 +9,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** Secondary CTA on Note Details — turns the note into a two-host broadcast
- *  you can listen to. Sits above the primary "Open Note" button. */
+/** Secondary CTA on Note Details: broadcast the note as a two-host conversation. */
 export function ListenButton({ onPress }: Props) {
   const colors = useTheme();
 

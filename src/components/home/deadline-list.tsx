@@ -11,8 +11,7 @@ type Props = {
   deadlines: DashboardDeadline[];
 };
 
-// Urgency drives the icon well, icon colour, and badge (mock: red for due
-// today, indigo for tomorrow, muted for later).
+// Urgency drives the icon well, icon colour, and badge.
 function urgencyStyles(urgency: DeadlineUrgency, colors: ColorTokens) {
   if (urgency === 'today') {
     return {

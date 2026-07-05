@@ -10,8 +10,7 @@ type Props = {
   total: number;
 };
 
-// Circle of radius 15.9155 in a 36×36 viewBox → circumference ≈ 100, so the dash
-// array can be "percent, 100" (same ring trick as the Semester Progress card).
+// r=15.9155 in a 36×36 viewBox → circumference ≈ 100, so dash = "percent, 100".
 const RING_PATH =
   'M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831';
 

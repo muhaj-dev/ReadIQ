@@ -12,8 +12,7 @@ type Props = {
   onDelete: () => void;
 };
 
-/** One row in the chat-history list: the conversation's title, its first
- *  question as a preview, when it was last active, and a delete button. */
+/** One chat-history row: title, first-question preview, last-active time, delete. */
 export function SessionCard({ session, onOpen, onDelete }: Props) {
   const colors = useTheme();
   const turns = Math.floor(session.messageCount / 2) || 1;

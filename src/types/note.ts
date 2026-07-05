@@ -1,6 +1,4 @@
-// The saved-note domain model — the app's source of truth (stored in SQLite).
-// Kept deliberately small; AI-derived fields (summary, topics) are computed in
-// later phases, never persisted as if the student wrote them.
+// Saved-note domain model — the app's source of truth (stored in SQLite).
 
 /** How the note entered the app — drives the source badge + icon. */
 export type NoteSource = 'paste' | 'file' | 'scan' | 'voice';
@@ -17,19 +15,46 @@ export type NoteAttachment = {
   /** Local uri (file:// / cache) used to preview an image or open a file. */
   uri: string;
   kind: NoteAttachmentKind;
-  /** MIME type reported by the picker (e.g. "application/pdf"). Used to detect a
-   *  PDF reliably even when the filename/uri has no `.pdf` extension (Android). */
+  /** MIME type from the picker — detects a PDF when the uri lacks a .pdf extension (Android). */
   mimeType?: string;
 };
 
-/** A margin note the student attached to a passage while reading (the reader's
- *  comment markers). `quote` is the text it's anchored to; `body` is what they
- *  wrote. The anchor itself lives as a `<mark data-cid>` inside `readerHtml`. */
+/** A reader margin note: `quote` is the anchored text, `body` is what the student wrote. */
 export type NoteComment = {
   id: string;
   quote: string;
   body: string;
   createdAt: string;
+};
+
+/** A rectangle on a PDF page, stored as fractions (0–1) of page size so it re-projects at any zoom. */
+export type PdfRect = { x: number; y: number; w: number; h: number };
+
+/** A highlight on the PDF Reader: colour + the page rectangles it covers. */
+export type PdfHighlight = {
+  id: string;
+  /** 1-based page number. */
+  page: number;
+  color: string;
+  rects: PdfRect[];
+  quote: string;
+  createdAt: string;
+};
+
+/** A margin comment on the PDF Reader — like a highlight, but carries a written body. */
+export type PdfCommentAnn = {
+  id: string;
+  page: number;
+  rects: PdfRect[];
+  quote: string;
+  body: string;
+  createdAt: string;
+};
+
+/** All annotations for a note's PDF Reader (kept separate from the text reader's `readerHtml`). */
+export type PdfAnnotations = {
+  highlights: PdfHighlight[];
+  comments: PdfCommentAnn[];
 };
 
 export type Note = {
@@ -45,16 +70,13 @@ export type Note = {
   tags: string[];
   /** Files/images attached to the note. */
   attachments: NoteAttachment[];
-  /** Reader HTML with highlights/comment anchors baked in as `<mark>`s. Null
-   *  until the student annotates in the reader — then it's derived from the note
-   *  content once and mutated in place. Kept separate from `contentHtml` so
-   *  grounding/editing stay on the clean source text. */
+  /** Reader HTML with highlight/comment `<mark>`s. Null until first annotation; kept separate from contentHtml. */
   readerHtml: string | null;
   /** Bodies of the reader's comment markers, keyed by their anchor's data-cid. */
   comments: NoteComment[];
-  /** AI Summary of THIS note's own text, generated once through the BTL runtime
-   *  (grounded in the note — never outside knowledge). Null until generated; the
-   *  Note Details screen shows an honest placeholder while it's null. */
+  /** PDF Reader highlights/comments (page geometry). Null until the first PDF annotation. */
+  pdfAnnotations: PdfAnnotations | null;
+  /** AI summary of this note's text, generated once via BTL. Null until generated. */
   aiSummary: string | null;
   /** ISO timestamp of when the note was saved. */
   createdAt: string;
@@ -85,6 +107,7 @@ export type NotePatch = Partial<
     | 'attachments'
     | 'readerHtml'
     | 'comments'
+    | 'pdfAnnotations'
     | 'aiSummary'
   >
 >;

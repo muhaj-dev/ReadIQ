@@ -12,12 +12,7 @@ import { useOnboardingStore } from '@/store/use-onboarding-store';
 const WELCOME: Href = '/welcome';
 const HOME: Href = '/home';
 
-/**
- * Splash flow (always light): the "✦ IQ" mark picks up where the native
- * splash left off, glides right into the full noteIQ wordmark, then a ~1s
- * loading bar advances. First-time students land in onboarding; returning
- * students (the flag is set) skip straight to Home.
- */
+/** Splash flow: mark → wordmark → loading bar, then route to onboarding or Home. */
 export default function SplashRoute() {
   const router = useRouter();
   const [settled, setSettled] = useState(false);
@@ -32,8 +27,7 @@ export default function SplashRoute() {
   const handleSettled = useCallback(() => setSettled(true), []);
   const handleFinished = useCallback(() => setFinished(true), []);
 
-  // Route only once the loading bar has finished AND the flag has been read,
-  // so a returning student is never briefly sent back into onboarding.
+  // Route only after the loading bar finishes AND the flag is read, so returners aren't flashed onboarding.
   useEffect(() => {
     if (!finished || !onboardingLoaded) return;
     router.replace(onboardingCompleted ? HOME : WELCOME);

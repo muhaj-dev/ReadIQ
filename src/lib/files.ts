@@ -27,9 +27,7 @@ const extensionLabel = (name: string) => {
 /** Unique-enough attachment id (app runtime, not a Workflow script). */
 const attachmentId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-/** True for a picked PDF — the files we run text extraction on. Checks the
- *  picker's MIME type first (reliable), then falls back to the filename/meta,
- *  because Android often hands back a uri/name with no `.pdf` extension. */
+/** True for a picked PDF. Checks MIME first, then name/meta (Android often omits `.pdf`). */
 export function isPdf(attachment: NoteAttachment): boolean {
   return (
     /pdf/i.test(attachment.mimeType ?? '') ||
@@ -38,28 +36,21 @@ export function isPdf(attachment: NoteAttachment): boolean {
   );
 }
 
-/**
- * Read a local file (file:// / cache uri) into a base64 data URI, e.g.
- * "data:application/pdf;base64,…". This is what the BTL runtime's `file` content
- * part expects for document extraction. Uses fetch + FileReader so it needs no
- * extra native module. Rejects if the file can't be read.
- *
- * Pass `mimeType` to override the type baked into the data URI. This matters on
- * React Native: a cached document's blob often reports `application/octet-stream`
- * (or an empty type), and the runtime then can't tell it's a PDF and returns no
- * text — so PDF extraction forces `application/pdf` here.
- */
-export async function fileUriToDataUri(uri: string, mimeType?: string): Promise<string> {
-  // Preferred path: read the file straight to base64 via expo-file-system. On
-  // native this is reliable, whereas RN's fetch(fileUri).blob() + FileReader
-  // frequently returns EMPTY data on Android — the real cause of the PDF
-  // "no content yet" bug. DocumentPicker copies to the cache (copyToCacheDirectory),
-  // so `uri` is a file:// path the File API can read.
+/** True for a picked .docx (Office Open XML — a zip we unpack locally, no BTL call).
+ *  Legacy binary `.doc` is deliberately excluded: it isn't a zip, so jszip can't read it. */
+export function isDocx(attachment: NoteAttachment): boolean {
+  return /wordprocessingml\.document/i.test(attachment.mimeType ?? '') || /\.docx$/i.test(attachment.name);
+}
+
+/** Read a local file into raw base64 (no data-URI prefix — what jszip.loadAsync wants).
+ *  Prefers expo-file-system; RN's fetch().blob() + FileReader often returns EMPTY data
+ *  on Android (the "no content yet" bug), so fetch is only the web blob: fallback. */
+export async function fileUriToBase64(uri: string): Promise<string> {
   try {
     const base64 = await new FsFile(uri).base64();
     if (base64) {
       console.log('[files] read via expo-file-system · base64 length:', base64.length);
-      return `data:${mimeType ?? 'application/octet-stream'};base64,${base64}`;
+      return base64;
     }
     console.warn('[files] expo-file-system returned empty base64 — falling back to fetch');
   } catch (err) {
@@ -75,18 +66,19 @@ export async function fileUriToDataUri(uri: string, mimeType?: string): Promise<
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(blob);
   });
-  // Rewrite the "data:<type>;base64," prefix when the caller knows the real type,
-  // so a wrong/empty blob type never makes the runtime skip a valid document.
-  if (mimeType) return dataUri.replace(/^data:[^;,]*/, `data:${mimeType}`);
-  return dataUri;
+  const comma = dataUri.indexOf(',');
+  return comma >= 0 ? dataUri.slice(comma + 1) : dataUri;
 }
 
-/**
- * Open the device file picker for a PDF / document and return its name, meta,
- * and uri. Resolves to null if the student cancels. Real text extraction
- * (a file → text call through the BTL runtime) lands in Phase 8 — for now the
- * picked file just becomes the note's attachment.
- */
+/** Read a local file into a base64 data URI (what BTL's `image_url`/`file` part expects).
+ *  Pass `mimeType` to stamp the type — RN cached blobs often report octet-stream,
+ *  which makes the runtime skip a valid PDF. Rejects on read failure. */
+export async function fileUriToDataUri(uri: string, mimeType?: string): Promise<string> {
+  const base64 = await fileUriToBase64(uri);
+  return `data:${mimeType ?? 'application/octet-stream'};base64,${base64}`;
+}
+
+/** Open the file picker for a PDF / document; null if cancelled. */
 export async function pickDocument(): Promise<PickedDocument | null> {
   const result = await DocumentPicker.getDocumentAsync({
     type: [
@@ -107,18 +99,19 @@ export async function pickDocument(): Promise<PickedDocument | null> {
   return { name: asset.name, meta, uri: asset.uri };
 }
 
-/**
- * Pick one or more documents (PDF / doc / txt) as note attachments. Returns an
- * empty array if the student cancels.
- */
-export async function pickFileAttachments(): Promise<NoteAttachment[]> {
+/** Pick one or more documents as note attachments; [] if cancelled.
+ *  `extractableOnly` limits the picker to formats the Upload flow can pull text from —
+ *  PDF (via BTL) and .docx (unpacked locally). Other callers attach any file. */
+export async function pickFileAttachments(options?: { extractableOnly?: boolean }): Promise<NoteAttachment[]> {
   const result = await DocumentPicker.getDocumentAsync({
-    type: [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-    ],
+    type: options?.extractableOnly
+      ? ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+      : [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'text/plain',
+        ],
     copyToCacheDirectory: true,
     multiple: true,
   });
@@ -137,19 +130,15 @@ export async function pickFileAttachments(): Promise<NoteAttachment[]> {
       mimeType: asset.mimeType,
     };
   });
-  // Diagnostic: confirms what the picker actually returned (name/mime drive PDF
-  // detection). Safe — logs metadata only, never file contents.
+  // Diagnostic: metadata only (name/mime drive PDF detection), never file contents.
   console.log(
     '[files] picked:',
-    attachments.map((a) => ({ name: a.name, meta: a.meta, mimeType: a.mimeType, isPdf: isPdf(a) })),
+    attachments.map((a) => ({ name: a.name, meta: a.meta, mimeType: a.mimeType, isPdf: isPdf(a), isDocx: isDocx(a) })),
   );
   return attachments;
 }
 
-/**
- * Pick one or more images from the library as note attachments. Modern iOS/
- * Android use the system photo picker (no permission prompt needed).
- */
+/** Pick one or more library images as note attachments (system photo picker, no prompt). */
 export async function pickImageAttachments(): Promise<NoteAttachment[]> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
@@ -172,10 +161,7 @@ export async function pickImageAttachments(): Promise<NoteAttachment[]> {
   });
 }
 
-/**
- * Pick a single image as a base64 data URI, for inserting INLINE into the rich
- * editor (a WebView can't load file:// images, but it can render a data URI).
- */
+/** Pick a single image as a base64 data URI for inline insertion (WebView can't load file://). */
 export async function pickInlineImageDataUri(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],

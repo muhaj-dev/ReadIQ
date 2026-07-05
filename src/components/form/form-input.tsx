@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, type TextInputProps } from 'react-native';
 
 import { fonts } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
@@ -15,10 +15,23 @@ type Props = {
   minHeight?: number;
   /** Show a danger border — e.g. a required field left blank on save. */
   error?: boolean;
+  /** Keyboard variant — e.g. "email-address" for the email field. */
+  keyboardType?: TextInputProps['keyboardType'];
+  /** Auto-capitalization — "none" for emails. */
+  autoCapitalize?: TextInputProps['autoCapitalize'];
 };
 
-/** White filled input that gains an indigo focus ring, per the mock. */
-export function FormInput({ value, onChangeText, placeholder, multiline = false, minHeight, error = false }: Props) {
+/** White filled input that gains an indigo focus ring. */
+export function FormInput({
+  value,
+  onChangeText,
+  placeholder,
+  multiline = false,
+  minHeight,
+  error = false,
+  keyboardType,
+  autoCapitalize,
+}: Props) {
   const colors = useTheme();
   const [focused, setFocused] = useState(false);
 
@@ -30,6 +43,8 @@ export function FormInput({ value, onChangeText, placeholder, multiline = false,
       placeholder={placeholder}
       placeholderTextColor={colors.outlineVariant}
       multiline={multiline}
+      keyboardType={keyboardType}
+      autoCapitalize={autoCapitalize}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[

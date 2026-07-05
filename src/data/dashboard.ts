@@ -1,8 +1,6 @@
 import type { AppIconName } from '@/components/ui/app-icon';
 
-// View types for the dashboard cards. The values are derived from real stores in
-// hooks/use-dashboard.ts — this file holds only the shared shapes the home
-// components render.
+// View types for the dashboard cards (values derived in hooks/use-dashboard.ts).
 
 export type StatTone = 'primary' | 'secondary' | 'deep';
 

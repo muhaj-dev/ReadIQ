@@ -1,4 +1,2 @@
-// Quick-prompt chips shown above the ASK input as calm starting points. Tapping
-// one seeds the input box; the conversation itself is real and grounded — see
-// store/use-chat-store + lib/chat.
+// Quick-prompt chips shown above the ASK input; tapping one seeds the input box.
 export const suggestionChips = ['Summarize', 'Explain', 'Quiz me', 'Flashcards'];

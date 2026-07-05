@@ -1,107 +1,84 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { NextButton } from '@/components/quiz/next-button';
-import { QuizFeedback } from '@/components/quiz/quiz-feedback';
+import { NoteMissing } from '@/components/note/note-missing';
+import { QuizGate } from '@/components/quiz/quiz-gate';
 import { QuizHeader } from '@/components/quiz/quiz-header';
-import { QuizOption, type OptionStatus } from '@/components/quiz/quiz-option';
-import { QuizProgress } from '@/components/quiz/quiz-progress';
-import { QuizQuestion } from '@/components/quiz/quiz-question';
-import { quizQuestions } from '@/data/quiz-questions';
+import { QuizRunner } from '@/components/quiz/quiz-runner';
+import { groupBySubject, parseQuizCount } from '@/lib/quiz-sources';
 import { useTheme } from '@/hooks/use-theme';
+import { useNotesStore } from '@/store/use-notes-store';
+import { type AttemptInput, useQuizStore } from '@/store/use-quiz-store';
 
-/** QUIZ — one question per screen with immediate green/red feedback. */
+/** QUIZ — generates a grounded quiz from the subject's notes, then runs it one question per screen. */
 export default function QuizActiveScreen() {
   const colors = useTheme();
   const router = useRouter();
-  const { subject } = useLocalSearchParams<{ subject?: string }>();
+  const { sourceId, count, fresh } = useLocalSearchParams<{
+    sourceId?: string;
+    count?: string;
+    fresh?: string;
+  }>();
+  const quizCount = parseQuizCount(count);
+  const isFresh = fresh === '1';
 
-  // 'mixed' (or a direct visit) quizzes everything; otherwise filter by subject.
-  const questions = useMemo(() => {
-    if (!subject || subject === 'mixed') return quizQuestions;
-    const picked = quizQuestions.filter((q) => q.subject === subject);
-    return picked.length > 0 ? picked : quizQuestions;
-  }, [subject]);
+  const notes = useNotesStore((s) => s.notes);
+  const source = useMemo(
+    () => groupBySubject(notes).find((s) => s.id === sourceId),
+    [notes, sourceId],
+  );
 
-  const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [correct, setCorrect] = useState(0);
-  const [weakTopics, setWeakTopics] = useState<string[]>([]);
+  const current = useQuizStore((s) => s.current);
+  const status = useQuizStore((s) => s.status);
+  const error = useQuizStore((s) => s.error);
+  const generate = useQuizStore((s) => s.generate);
+  const recordResult = useQuizStore((s) => s.recordResult);
 
-  const question = questions[index];
-  const total = questions.length;
-  const answered = selected !== null;
-  const isCorrect = selected === question.answerKey;
-  const isLast = index === total - 1;
+  // Build (or replay the cached) quiz on open; generate() guards against duplicate work.
+  useEffect(() => {
+    if (source) generate(source, { count: quizCount, fresh: isFresh });
+  }, [source, generate, quizCount, isFresh]);
 
-  const statusFor = (key: string): OptionStatus => {
-    if (!answered) return 'idle';
-    if (key === question.answerKey) return 'correct';
-    if (key === selected) return 'wrong';
-    return 'idle';
+  const exit = () => (router.canGoBack() ? router.back() : router.navigate('/quiz'));
+
+  const onFinish = async (attempt: AttemptInput) => {
+    await recordResult(attempt);
+    router.replace({
+      pathname: '/quiz/result',
+      params: {
+        sourceId: attempt.sourceId,
+        sourceLabel: attempt.sourceLabel,
+        count: String(quizCount),
+        correct: String(attempt.correct),
+        total: String(attempt.total),
+        topics: JSON.stringify(attempt.weakTopics),
+      },
+    });
   };
 
-  const onSelect = (key: string) => {
-    if (answered) return;
-    setSelected(key);
-    if (key === question.answerKey) setCorrect((c) => c + 1);
-    else setWeakTopics((t) => (t.includes(question.sourceNoteTitle) ? t : [...t, question.sourceNoteTitle]));
-  };
+  if (!source) return <NoteMissing title="Quiz" />;
 
-  const exit = () => (router.canGoBack() ? router.back() : router.navigate('/home'));
-
-  const onNext = () => {
-    if (isLast) {
-      return router.replace({
-        pathname: '/quiz/result',
-        params: {
-          correct: String(correct),
-          total: String(total),
-          subject: subject ?? 'mixed',
-          topics: JSON.stringify(weakTopics),
-        },
-      });
-    }
-    setIndex((i) => i + 1);
-    setSelected(null);
-  };
+  const ready = status === 'ready' && !!current && current.questions.length > 0;
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
         <QuizHeader onClose={exit} />
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <QuizProgress current={index + 1} total={total} />
-          <QuizQuestion prompt={question.prompt} />
-
-          <View className="gap-3">
-            {question.options.map((option) => (
-              <QuizOption
-                key={option.key}
-                letter={option.key}
-                text={option.text}
-                status={statusFor(option.key)}
-                disabled={answered}
-                onPress={() => onSelect(option.key)}
-              />
-            ))}
-          </View>
-
-          {answered && <QuizFeedback correct={isCorrect} />}
-        </ScrollView>
-
-        <View className="px-5 pb-2 pt-3">
-          <NextButton
-            label={isLast ? 'Finish' : 'Next Question'}
-            enabled={answered}
-            onPress={onNext}
+        {ready ? (
+          <QuizRunner key={current.createdAt} quiz={current} onFinish={onFinish} />
+        ) : (
+          <QuizGate
+            status={status}
+            error={error}
+            sourceLabel={source.label}
+            onRetry={() => generate(source, { count: quizCount, fresh: isFresh })}
+            onExit={exit}
           />
-        </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -110,11 +87,5 @@ export default function QuizActiveScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-    gap: 24,
   },
 });

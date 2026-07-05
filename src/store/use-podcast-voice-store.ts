@@ -1,7 +1,4 @@
-// The podcast voice store — which device voice reads each host, plus the speaking
-// speed, persisted to AsyncStorage (one tiny record, per AGENTS.md). It also holds
-// the curated device-voice list so both the player (reads the picks) and the voice
-// picker (offers the choices) share one source of truth. Loaded once via init().
+// Podcast voice store: per-host device voice + speaking speed, persisted to AsyncStorage.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -62,8 +59,7 @@ export const usePodcastVoiceStore = create<VoiceState>((set, get) => ({
       console.warn('[podcast] failed to load voice prefs', err);
     }
 
-    // Keep a saved pick only if that voice still exists on this device; otherwise
-    // fall back to the smart default (Enhanced-quality) so it never goes silent.
+    // Keep a saved pick only if that voice still exists; else fall back to the smart default.
     const keep = (id: unknown, dflt: string | null): string | null =>
       typeof id === 'string' && ids.has(id) ? id : dflt;
 

@@ -1,5 +1,4 @@
-// Static rows for the Note Options screen (see the note-options mock). The
-// actions become real once notes live in SQLite — the rows are UI-first.
+// Static rows for the Note Options screen (UI-first).
 
 import type { AppIconName } from '@/components/ui/app-icon';
 

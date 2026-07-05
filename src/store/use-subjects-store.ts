@@ -1,6 +1,4 @@
-// The subject/course list shown by the note editor's subject picker. Defaults
-// plus any course the student typed in themselves, persisted to SQLite so they
-// reappear next session.
+// Subject/course list for the note editor's picker: defaults + student-added, persisted to SQLite.
 
 import { create } from 'zustand';
 

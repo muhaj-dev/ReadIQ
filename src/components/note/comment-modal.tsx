@@ -34,10 +34,7 @@ type Props = {
   onCancel: () => void;
 };
 
-/** A Figma-style comment card for the reader: a floating pill with an avatar +
- *  "You" + relative-time header, the pinned passage, and a composer whose blue
- *  circular send button posts the note. Existing comments can be edited or
- *  deleted; new ones just need a body. */
+/** Comment card for the reader: header, pinned passage, and composer; existing ones edit or delete. */
 export function CommentModal({
   visible,
   quote,

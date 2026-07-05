@@ -1,8 +1,4 @@
-// The podcast store — one cached "From Your Notes" episode per note, plus the
-// action that generates it through the BTL runtime. Screens stay thin: the Listen
-// screen calls `load` on open (cheap — reads SQLite) and `generate` only when the
-// student taps "Create episode", so a note is scripted at most once per version
-// (protecting the ~$0.50 credit budget).
+// Podcast store: one cached "From Your Notes" episode per note, generated via the BTL runtime.
 
 import { create } from 'zustand';
 
@@ -43,8 +39,7 @@ export const usePodcastStore = create<PodcastState>((set, get) => ({
   error: {},
 
   load: async (noteId) => {
-    // Already generating, or already loaded this session → nothing to do (avoids
-    // a spinner flashing over an episode the student just made).
+    // Already generating or loaded this session → nothing to do (avoid a spinner flash).
     const current = get().status[noteId];
     if (current === 'generating' || current === 'ready') return;
     set((s) => ({ status: setNoteState(s.status, noteId, 'loading') }));

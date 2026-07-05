@@ -16,19 +16,14 @@ type Props = {
   onBack?: () => void;
 };
 
-// Only a drag that STARTS within this many px of the left edge counts as
-// "back" — the same affordance as the iOS / Android system back gesture.
+// A drag must START within this many px of the left edge to count as "back".
 const EDGE_WIDTH = 40;
 // Horizontal travel (px) before the pan claims the touch from the ScrollView.
 const ACTIVATE_X = 16;
 // Vertical travel (px) that hands the touch back to the vertical ScrollView.
 const FAIL_Y = 14;
 
-/**
- * Wraps a full-screen (non-stack) screen so an edge swipe left→right goes back,
- * mirroring the native back gesture the pushed screens (e.g. /add) get for free.
- * Ask AI is a tab, not a pushed route, so it needs this to feel the same.
- */
+/** Edge-swipe-to-go-back for full-screen tabs that lack the native gesture. */
 export function SwipeBackView({ children, onBack }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();

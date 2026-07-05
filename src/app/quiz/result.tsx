@@ -6,11 +6,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { QuizHeader } from '@/components/quiz/quiz-header';
 import { QuizIntro } from '@/components/quiz/quiz-intro';
 import { ResultActions } from '@/components/quiz/result-actions';
+import { ResultReview } from '@/components/quiz/result-review';
 import { ResultSummary } from '@/components/quiz/result-summary';
 import { ResultTopics } from '@/components/quiz/result-topics';
+import { SourceChip } from '@/components/quiz/source-chip';
 import { useTheme } from '@/hooks/use-theme';
+import { useQuizStore } from '@/store/use-quiz-store';
 
-type Params = { correct?: string; total?: string; subject?: string; topics?: string };
+type Params = {
+  correct?: string;
+  total?: string;
+  sourceId?: string;
+  sourceLabel?: string;
+  count?: string;
+  topics?: string;
+};
 
 function parseTopics(raw?: string): string[] {
   try {
@@ -21,7 +31,7 @@ function parseTopics(raw?: string): string[] {
   }
 }
 
-/** QUIZ RESULT — score summary, topics to review, retry or go home. */
+/** QUIZ RESULT — score summary, weak topics, the source note, retry or go home. */
 export default function QuizResultScreen() {
   const colors = useTheme();
   const router = useRouter();
@@ -30,10 +40,22 @@ export default function QuizResultScreen() {
   const correct = Number(params.correct ?? 0);
   const total = Number(params.total ?? 0);
   const topics = parseTopics(params.topics);
+  const review = useQuizStore((s) => s.review);
+  // Only show the review when it belongs to the quiz we're showing results for.
+  const missed = review && review.sourceLabel === params.sourceLabel ? review.missed : [];
 
   const home = () => router.navigate('/home');
-  const retry = () =>
-    router.replace({ pathname: '/quiz/active', params: { subject: params.subject ?? 'mixed' } });
+  // A retry is a fresh attempt: same subject/length, new questions (fresh: '1' regenerates).
+  const retry = () => {
+    if (params.sourceId) {
+      router.replace({
+        pathname: '/quiz/active',
+        params: { sourceId: params.sourceId, count: params.count ?? '', fresh: '1' },
+      });
+    } else {
+      home();
+    }
+  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
@@ -45,7 +67,9 @@ export default function QuizResultScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <QuizIntro title="Quiz complete!" subtitle="Here’s how you did on your notes." />
           <ResultSummary correct={correct} total={total} />
+          {params.sourceLabel ? <SourceChip label={params.sourceLabel} /> : null}
           <ResultTopics topics={topics} />
+          <ResultReview missed={missed} />
         </ScrollView>
 
         <View className="px-5 pb-2 pt-3">

@@ -1,8 +1,6 @@
 import type { AppIconName } from '@/components/ui/app-icon';
 
-// Shared Memory Panel card type. Real notes are mapped from the SQLite-backed
-// useNotesStore via `toMemoryNote` (see lib/note-view.ts) — there is no sample
-// data here.
+// Shared Memory Panel card type (real notes mapped in lib/note-view.ts).
 
 /** Drive-style file tint for a note's icon tile (see the memory mock). */
 export type NoteTint = 'indigo' | 'neutral' | 'green' | 'amber' | 'red';

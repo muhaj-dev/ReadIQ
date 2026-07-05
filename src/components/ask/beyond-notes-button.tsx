@@ -6,9 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 type Props = { onPress: () => void };
 
-/** A small, low-key text button under an answer: the student can opt IN to a
- *  general-knowledge answer from OUTSIDE their notes. Kept visually quiet so it
- *  never competes with the trusted "From your notes" answer above it. */
+/** Quiet opt-in button for a general-knowledge answer from outside the notes. */
 export function BeyondNotesButton({ onPress }: Props) {
   const colors = useTheme();
 

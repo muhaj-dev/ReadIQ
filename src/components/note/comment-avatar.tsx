@@ -3,9 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppIcon } from '@/components/ui/app-icon';
 import { useTheme } from '@/hooks/use-theme';
 
-/** The commenter's avatar in the reader's Figma-style comment card. This is the
- *  student's own margin note, so the identity is "You" — a filled indigo circle
- *  with a person glyph (honest, no faked initials for a name we don't store). */
+/** Commenter avatar in the reader — a filled indigo circle for "You". */
 export function CommentAvatar({ size = 34 }: { size?: number }) {
   const colors = useTheme();
   return (

@@ -1,6 +1,4 @@
-// Note-detail view model for the Note Details / Reader / Edit screens, derived
-// live from a real saved note in the Memory store. No mock content lives here —
-// every field comes from what the student actually saved.
+// Note-detail view model for the Details / Reader / Edit screens, derived from a saved note.
 
 import { useMemo } from 'react';
 
@@ -8,7 +6,7 @@ import { relativeDay, sourceLabel, wordCount } from '@/lib/note-view';
 import { htmlToRichBlocks, type RichBlock } from '@/lib/rich-blocks';
 import { firstInlineImageSrc, plainTextToHtml } from '@/lib/rich-text';
 import { useNotesStore } from '@/store/use-notes-store';
-import type { Note, NoteAttachment, NoteComment } from '@/types/note';
+import type { Note, NoteAttachment, NoteComment, PdfAnnotations } from '@/types/note';
 
 /** Key Topics chip tone → topic* theme tokens (see the note-details mock). */
 export type TopicTone = 'green' | 'red' | 'amber' | 'blue';
@@ -38,8 +36,7 @@ export type NoteDetail = {
   preview: { heading: string; excerpt: string; image?: string | null };
   /** Formatting-preserving reader blocks (headings, marks, lists, images). */
   reader: RichBlock[];
-  /** HTML the WebView reader renders — the student's saved annotations if they
-   *  have any, otherwise the note content freshly derived (see buildReaderHtml). */
+  /** HTML the WebView reader renders — saved annotations, else freshly derived content. */
   readerHtml: string;
   /** Comment-marker bodies for the reader, keyed to `<mark data-cid>` anchors. */
   comments: NoteComment[];
@@ -50,6 +47,8 @@ export type NoteDetail = {
   /** Rich HTML the editor opens with; null → derive from `content`. */
   contentHtml: string | null;
   attachments: NoteAttachment[];
+  /** PDF Reader highlights/comments (null until the first PDF annotation). */
+  pdfAnnotations: PdfAnnotations | null;
 };
 
 /** A blank draft for the Add Note / Add Document form (paste + upload flows). */
@@ -70,8 +69,7 @@ const SUMMARY_PLACEHOLDER = {
   more: 'Ask a question about it and answers will be grounded here, with a citation.',
 };
 
-/** Split a generated summary into a one-line gist + the rest (revealed by "Show
- *  more"). Falls back to the whole thing as the gist when it's a single sentence. */
+/** Split a summary into a one-line gist + the rest (revealed by "Show more"). */
 function splitSummary(aiSummary: string | null): { summary: string; more: string } {
   const text = aiSummary?.trim();
   if (!text) return SUMMARY_PLACEHOLDER;
@@ -80,9 +78,7 @@ function splitSummary(aiSummary: string | null): { summary: string; more: string
   return { summary: text, more: '' };
 }
 
-/** Ordered reader blocks: the written content (formatting + inline images kept
- *  in place), then any image attachments. The note title is rendered separately
- *  by the reader, so it isn't merged in here. */
+/** Ordered reader blocks: written content, then image attachments. */
 function buildReaderBlocks(note: Note): RichBlock[] {
   const html = note.contentHtml?.trim() || plainTextToHtml(note.content);
   const blocks = html ? htmlToRichBlocks(html) : [];
@@ -95,9 +91,7 @@ function buildReaderBlocks(note: Note): RichBlock[] {
   return blocks;
 }
 
-/** The HTML the WebView reader renders when the note has no saved annotations
- *  yet: the written content, plus any image attachments appended as <img>. Once
- *  the student highlights or comments, note.readerHtml supersedes this. */
+/** Reader HTML when the note has no saved annotations: content + image attachments as <img>. */
 function buildReaderHtml(note: Note): string {
   const base = note.contentHtml?.trim() || plainTextToHtml(note.content);
   const images = note.attachments
@@ -107,9 +101,7 @@ function buildReaderHtml(note: Note): string {
   return `${base}${images}`;
 }
 
-/** Build the Note Details / Reader shape from a real saved note. AI-derived
- *  fields (summary, key topics) stay honest placeholders until the AI phases —
- *  we never fabricate a summary of the student's own note. */
+/** Build the Note Details / Reader shape from a saved note. */
 function toNoteDetail(note: Note): NoteDetail {
   const words = wordCount(note.content);
   const trimmed = note.content.trim();
@@ -140,15 +132,11 @@ function toNoteDetail(note: Note): NoteDetail {
     content: note.content,
     contentHtml: note.contentHtml,
     attachments: note.attachments,
+    pdfAnnotations: note.pdfAnnotations,
   };
 }
 
-/**
- * Reactive Note Details for `id`. Subscribes to the Memory store so the Details,
- * Reader, and Edit screens re-render the moment the note is edited or deleted —
- * the fix for "saved changes should persist across pages". Returns null when the
- * note doesn't exist (deleted, or a stale link).
- */
+/** Reactive Note Details for `id`; re-renders on edit/delete, null if the note is gone. */
 export function useNoteDetail(id: string): NoteDetail | null {
   const note = useNotesStore((s) => s.notes.find((n) => n.id === id));
   return useMemo(() => (note ? toNoteDetail(note) : null), [note]);

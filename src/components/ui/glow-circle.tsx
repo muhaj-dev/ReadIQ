@@ -9,8 +9,7 @@ type Props = {
   opacity?: number;
 };
 
-/** Soft radial glow — stands in for the mocks' CSS-blurred colour circles,
- *  which React Native can't render without a blur library. */
+/** Soft radial glow — RN can't render the mocks' CSS blur natively. */
 export function GlowCircle({ color, size, opacity = 0.3 }: Props) {
   // useId can contain ':' which is invalid inside an SVG url() reference.
   const id = `glow-${useId().replace(/:/g, '')}`;

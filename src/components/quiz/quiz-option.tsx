@@ -16,10 +16,7 @@ type Props = {
   onPress: () => void;
 };
 
-/**
- * A single MCQ answer card. Neutral until answered, then the correct option
- * turns green (with a check) and a wrong pick turns red (with a ✕).
- */
+/** One MCQ answer card; correct turns green, wrong turns red. */
 export function QuizOption({ letter, text, status, disabled, onPress }: Props) {
   const colors = useTheme();
   const s = palette(colors)[status];

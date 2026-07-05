@@ -10,6 +10,8 @@ type Props = {
   year: number;
   monthIndex: number;
   selectedDay: number;
+  /** Days of this month that have a deadline — rendered with a dot underneath. */
+  markedDays?: number[];
 };
 
 /** Chunk the flat cell list into rows of 7 for week-by-week rendering. */
@@ -19,10 +21,12 @@ function toWeeks<T>(cells: T[]): T[][] {
   return weeks;
 }
 
-/** Month calendar: weekday header + date grid with the selected day circled. */
-export function CalendarGrid({ year, monthIndex, selectedDay }: Props) {
+/** Month calendar: weekday header + date grid with the selected day circled and
+ *  deadline days dotted. */
+export function CalendarGrid({ year, monthIndex, selectedDay, markedDays = [] }: Props) {
   const colors = useTheme();
   const weeks = toWeeks(buildMonthCells(year, monthIndex));
+  const marked = new Set(markedDays);
 
   return (
     <View className="gap-4">
@@ -41,6 +45,7 @@ export function CalendarGrid({ year, monthIndex, selectedDay }: Props) {
         <View key={weekIndex} className="flex-row">
           {week.map((cell, cellIndex) => {
             const selected = cell.inMonth && cell.day === selectedDay;
+            const isMarked = cell.inMonth && marked.has(cell.day);
             return (
               <View key={cellIndex} className="h-10 flex-1 items-center justify-center">
                 {selected ? (
@@ -62,6 +67,13 @@ export function CalendarGrid({ year, monthIndex, selectedDay }: Props) {
                     {cell.day}
                   </Text>
                 )}
+                {/* Deadline dot — hidden under the selected-day circle. */}
+                {isMarked && !selected ? (
+                  <View
+                    className="absolute bottom-0.5 h-1 w-1 rounded-pill"
+                    style={{ backgroundColor: colors.primary }}
+                  />
+                ) : null}
               </View>
             );
           })}

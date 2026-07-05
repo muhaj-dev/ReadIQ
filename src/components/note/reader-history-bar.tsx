@@ -11,9 +11,7 @@ type Props = {
   onRedo: () => void;
 };
 
-/** Small floating pill in the reader's top-right corner: step highlights and
- *  comments backward/forward. Buttons dim + go untappable when there's nothing
- *  left to undo/redo, so the student always knows the timeline's edges. */
+/** Floating undo/redo pill in the reader; buttons dim when there's nothing left. */
 export function ReaderHistoryBar({ canUndo, canRedo, onUndo, onRedo }: Props) {
   const colors = useTheme();
 

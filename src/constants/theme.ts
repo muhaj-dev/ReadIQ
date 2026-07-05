@@ -1,7 +1,4 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+// App colours, defined for light and dark mode.
 
 import { Platform } from 'react-native';
 
@@ -220,20 +217,13 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 /** The colour object returned by useTheme() — light or dark token set. */
 export type ColorTokens = (typeof Colors)[keyof typeof Colors];
 
-/**
- * Brand gradient (blue → purple). Theme-independent — the noteIQ mark keeps the
- * same accent gradient in light and dark mode, only the ink/background adapt.
- */
+/** Brand gradient (blue → purple), theme-independent. */
 export const Brand = {
   gradientStart: '#3B4DF5', // royal blue
   gradientEnd: '#8B33E8', // violet
 } as const;
 
-/**
- * Onboarding design tokens (from the onboarding mockups — a Material-3-style
- * indigo palette). The intro flow is always light, like the splash, so this is
- * a single set. Components never hardcode these hex values — import `Onboard`.
- */
+/** Onboarding design tokens (always light, single set). */
 export const Onboard = {
   surface: '#f9f9ff', // screen background (welcome / first-note)
   surfaceLowest: '#ffffff', // about screen background, cards, inactive chips
@@ -254,26 +244,23 @@ export const Onboard = {
   success: '#059669', // saved-note check
 } as const;
 
-/**
- * Highlighter colour applied inside the rich note editor. Fixed and
- * theme-independent (like Brand) — the editor canvas is always light, so a warm
- * marker yellow reads well in both app themes.
- */
+/** Highlighter colour in the rich note editor — fixed, theme-independent. */
 export const EditorHighlight = '#FEF08A' as const;
 
-/**
- * Ink for text sitting on the marker-yellow highlight. Fixed dark in both themes
- * (like EditorHighlight) so highlighted words stay legible on the pale marker,
- * even when the surrounding reader text is light in dark mode.
- */
+/** Ink for text on the marker-yellow highlight — fixed dark in both themes. */
 export const EditorHighlightInk = '#1f2430' as const;
 
-/**
- * Reader highlighter swatches — the colours the pen tool offers when the student
- * highlights a passage in the Note Reader. Soft marker tones, fixed in both
- * themes (like EditorHighlight) because the reader canvas is always light. The
- * first entry is the default selection. Text stays readable on all of them.
- */
+/** Font-colour swatches for the note editor's text-colour picker. Fixed in both themes. */
+export const EditorTextColors = [
+  '#ef4444', // red
+  '#f59e0b', // amber
+  '#22c55e', // green
+  '#3b82f6', // blue
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+] as const;
+
+/** Reader highlighter swatches; first entry is the default. Fixed in both themes. */
 export const ReaderHighlights = [
   '#FEF08A', // yellow
   '#BBF7D0', // green
@@ -282,11 +269,7 @@ export const ReaderHighlights = [
   '#FED7AA', // orange
 ] as const;
 
-/**
- * Deadline marker colours (from the Add Deadline mock's colour row). These are
- * saturated category swatches the student picks per deadline — fixed in both
- * themes, like Brand. Order matches the mock: red → purple.
- */
+/** Deadline marker colours the student picks per deadline — fixed in both themes. */
 export const DeadlineMarkers = [
   '#FF5252', // red
   '#FF9100', // orange
@@ -296,10 +279,7 @@ export const DeadlineMarkers = [
   '#651FFF', // purple
 ] as const;
 
-/**
- * Scan Page viewfinder chrome (from the scan mock). The camera screen is dark
- * in both themes — like the system camera — so this is a single set.
- */
+/** Scan Page viewfinder chrome — dark in both themes, single set. */
 export const CameraChrome = {
   background: '#000000',
   topBar: '#00000066', // header scrim (black @40%)

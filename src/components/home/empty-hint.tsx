@@ -13,9 +13,7 @@ type Props = {
   onPress?: () => void;
 };
 
-/** A calm empty-state card for dashboard sections whose data lands in a later
- *  phase (deadlines, weak topics) — honest about having nothing yet, with a
- *  gentle nudge toward the screen that fills it. */
+/** Calm empty-state card for a dashboard section with no data yet. */
 export function EmptyHint({ icon, title, subtitle, cta, onPress }: Props) {
   const colors = useTheme();
 

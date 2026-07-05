@@ -13,9 +13,7 @@ type Props = {
   onListen: () => void;
 };
 
-/** The floating pill over the Note Reader. The pen highlights the selected text
- *  and the comment tool attaches a note to it — both toggle a mode instead of
- *  leaving the reader. Broadcast turns the note into a two-host conversation. */
+/** Floating pill over the Note Reader: highlight, comment, and Broadcast tools. */
 export function ReaderToolbar({ mode, onSetMode, onListen }: Props) {
   const colors = useTheme();
 

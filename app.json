@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "noteIQ",
+    "name": "readIQ",
     "slug": "noteiq",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -25,26 +25,26 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",
-          "image": "./assets/images/brand/noteiq-mark.png",
+          "image": "./assets/images/brand/readiq-iqmark.png",
           "imageWidth": 120
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "noteIQ uses the camera to scan pages of your notes."
+          "cameraPermission": "readIQ uses the camera to scan pages of your notes."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "noteIQ needs photo access so you can add a note from an image."
+          "photosPermission": "readIQ needs photo access so you can add a note from an image."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "noteIQ records your lectures so it can transcribe them into notes."
+          "microphonePermission": "readIQ records your lectures so it can transcribe them into notes."
         }
       ],
       "expo-sqlite"

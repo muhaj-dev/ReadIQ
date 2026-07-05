@@ -7,7 +7,7 @@ import { fonts } from '@/constants/typography';
 import { useTheme } from '@/hooks/use-theme';
 import { withAlpha } from '@/lib/color';
 
-// Route name → Material glyph (see the dashboard mock's bottom nav).
+// Route name → Material glyph.
 const TAB_ICONS: Record<string, AppIconName> = {
   home: 'home',
   ask: 'auto-awesome',
@@ -15,16 +15,12 @@ const TAB_ICONS: Record<string, AppIconName> = {
   profile: 'person',
 };
 
-/**
- * Custom bottom nav: Home · Ask AI · [ + ] · Memory · Profile. The active tab
- * sits in an indigo pill; the raised centre button opens the Add Note flow.
- */
+/** Custom bottom nav; active tab in an indigo pill, raised center Add button. */
 export function AppTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const colors = useTheme();
   const router = useRouter();
 
-  // Ask AI is full-bleed with its own chat input, so it hides the tabs (per the
-  // mock) — the same as the Add flow. Its header's back chevron returns to Home.
+  // Ask AI is full-bleed with its own input, so it hides the tab bar.
   if (state.routes[state.index]?.name === 'ask') return null;
 
   const tabs = state.routes.map((route, index) => {
@@ -68,8 +64,7 @@ export function AppTabBar({ state, descriptors, navigation, insets }: BottomTabB
     );
   });
 
-  // The + Add Note button sits between Ask AI and Memory. Only gently raised so
-  // it never overlaps the Ask screen's input pill just above the bar.
+  // The + Add button sits between Ask and Memory; only gently raised.
   tabs.splice(
     2,
     0,
@@ -95,9 +90,7 @@ export function AppTabBar({ state, descriptors, navigation, insets }: BottomTabB
           backgroundColor: colors.surface,
           borderTopColor: withAlpha(colors.outlineVariant, 0.2),
           shadowColor: colors.shadow,
-          // Slim 64px row + the device's bottom inset: the tabs hug the bottom
-          // edge, while the inset padding keeps them clear of Android's
-          // 3-button / gesture navigation (edge-to-edge draws under it).
+          // Slim 64px row + bottom inset to clear Android's nav bar.
           height: 64 + insets.bottom,
           paddingBottom: insets.bottom,
         },

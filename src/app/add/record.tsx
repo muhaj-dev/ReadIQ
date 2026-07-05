@@ -11,8 +11,7 @@ import { TabPlaceholder } from '@/components/ui/tab-placeholder';
 import { useLectureRecorder } from '@/hooks/use-lecture-recorder';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Add — Record Lecture. Recording starts on entry; the editable transcript
- *  (audio → text through the BTL runtime) lands in Phase 8. */
+/** Add — Record Lecture. Recording starts on entry; transcript lands in Phase 8. */
 export default function RecordScreen() {
   const colors = useTheme();
   const router = useRouter();
@@ -25,10 +24,13 @@ export default function RecordScreen() {
     else router.navigate('/add');
   };
 
-  // Finish: stop and hand the recording (its duration) to the Record Result screen.
+  // Finish: stop and hand the recording (uri + duration) to the Record Result screen.
   const finish = async () => {
-    await stop();
-    router.replace({ pathname: '/add/record-result', params: { seconds: String(seconds) } });
+    const uri = await stop();
+    router.replace({
+      pathname: '/add/record-result',
+      params: { seconds: String(seconds), uri: uri ?? '' },
+    });
   };
 
   if (status === 'denied') {
@@ -36,7 +38,7 @@ export default function RecordScreen() {
       <TabPlaceholder
         icon="mic"
         title="Microphone access needed"
-        message="Allow microphone access so noteIQ can record and transcribe your lecture."
+        message="Allow microphone access so readIQ can record and transcribe your lecture."
         action={{ label: 'Go back', onPress: () => router.back() }}
       />
     );
@@ -48,9 +50,7 @@ export default function RecordScreen() {
       {/* SafeAreaView doesn't support className (Style Exception Rule) → StyleSheet. */}
       <SafeAreaView edges={['top']} style={styles.flex}>
         <AddHeader title="Record Lecture" />
-        {/* Proportions from the mock: the waveform floats centred in the block
-            above the timer (~60% of the screen), controls sit just below with
-            fixed breathing room at the bottom. */}
+        {/* Waveform centred (~60%), timer below, controls with bottom breathing room. */}
         <View className="flex-1 px-5">
           <View className="flex-[6] items-center justify-center">
             <RecordWaveform active={status === 'recording'} />
