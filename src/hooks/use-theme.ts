@@ -1,14 +1,11 @@
-/**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
- */
-
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
+/**
+ * The hackathon build is light-only (app.json userInterfaceStyle: "light"),
+ * so this always returns the light tokens. Components already consume colours
+ * through this hook, so when the theme toggle lands (Phase 9) only this file
+ * and useThemeStore change — Colors.dark is ready and waiting.
+ */
 export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
-
-  return Colors[theme];
+  return Colors.light;
 }

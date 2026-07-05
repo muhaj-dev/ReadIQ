@@ -1,98 +1,51 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { type Href, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { LogoReveal } from '@/components/splash/logo-reveal';
+import { SplashBackground } from '@/components/splash/splash-background';
+import { SplashFooter } from '@/components/splash/splash-footer';
+import { useOnboardingStore } from '@/store/use-onboarding-store';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+const WELCOME: Href = '/welcome';
+const HOME: Href = '/home';
+
+/**
+ * Splash flow (always light): the "✦ IQ" mark picks up where the native
+ * splash left off, glides right into the full noteIQ wordmark, then a ~1s
+ * loading bar advances. First-time students land in onboarding; returning
+ * students (the flag is set) skip straight to Home.
+ */
+export default function SplashRoute() {
+  const router = useRouter();
+  const [settled, setSettled] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const onboardingLoaded = useOnboardingStore((s) => s.loaded);
+  const onboardingCompleted = useOnboardingStore((s) => s.completed);
+
+  const hideNativeSplash = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
+  const handleSettled = useCallback(() => setSettled(true), []);
+  const handleFinished = useCallback(() => setFinished(true), []);
+
+  // Route only once the loading bar has finished AND the flag has been read,
+  // so a returning student is never briefly sent back into onboarding.
+  useEffect(() => {
+    if (!finished || !onboardingLoaded) return;
+    router.replace(onboardingCompleted ? HOME : WELCOME);
+  }, [finished, onboardingLoaded, onboardingCompleted, router]);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View className="flex-1 items-center justify-center" onLayout={hideNativeSplash}>
+      <StatusBar style="dark" />
+      <SplashBackground />
+
+      <LogoReveal onSettled={handleSettled} />
+      {settled ? <SplashFooter durationMs={1000} onComplete={handleFinished} /> : null}
+    </View>
   );
 }
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});

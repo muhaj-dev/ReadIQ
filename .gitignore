@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# BTL runtime secrets — scoped API key, never commit (.env.example is safe to commit)
+.env
+
 # typescript
 *.tsbuildinfo
 

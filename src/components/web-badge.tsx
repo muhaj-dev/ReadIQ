@@ -5,14 +5,12 @@ import { useColorScheme, StyleSheet } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
-import { Spacing } from '@/constants/theme';
-
 export function WebBadge() {
   const scheme = useColorScheme();
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="code" themeColor="textSecondary" style={styles.versionText}>
+    <ThemedView className="items-center gap-2 p-8">
+      <ThemedText type="code" themeColor="textSecondary" className="text-center">
         v{version}
       </ThemedText>
       <Image
@@ -27,15 +25,8 @@ export function WebBadge() {
   );
 }
 
+// Image sizing kept in StyleSheet (Style Exception Rule — aspect-ratio'd asset).
 const styles = StyleSheet.create({
-  container: {
-    padding: Spacing.five,
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  versionText: {
-    textAlign: 'center',
-  },
   badgeImage: {
     width: 123,
     aspectRatio: 123 / 24,
