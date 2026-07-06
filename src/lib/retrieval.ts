@@ -32,12 +32,25 @@ const STOPWORDS = new Set([
   'most', 'such', 'each', 'between', 'within', 'during', 'need', 'want', 'get',
 ]);
 
-/** Lowercase alphanumeric tokens, minus stopwords and single characters. */
+/** Light suffix folding so singular/plural & simple inflections match during
+ *  retrieval ("communication" ↔ "communications", "studies" ↔ "study"). Only
+ *  widens matching — it never invents overlap, so the grounding gate stays honest. */
+function foldSuffix(token: string): string {
+  if (token.length <= 4) return token; // too short to fold safely
+  if (token.endsWith('ies')) return `${token.slice(0, -3)}y`; // studies → study
+  if (token.endsWith('ss')) return token; // class, process — the 's' isn't a plural
+  if (token.endsWith('s')) return token.slice(0, -1); // communications → communication
+  return token;
+}
+
+/** Lowercase alphanumeric tokens, minus stopwords and single characters, each
+ *  suffix-folded so a query matches a note that only differs by plural form. */
 export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length > 1 && !STOPWORDS.has(t));
+    .filter((t) => t.length > 1 && !STOPWORDS.has(t))
+    .map(foldSuffix);
 }
 
 // Split into sentences without lookbehind (Hermes-safe).
@@ -75,9 +88,13 @@ export function chunkText(text: string): string[] {
   return chunks;
 }
 
-/** Chunk one saved note, tagging every chunk with its source for citations. */
+/** Chunk one saved note, tagging every chunk with its source for citations.
+ *  The title + subject lead the searchable text so a topic named only in the
+ *  title (e.g. "Data Communications") is still found by a short question. */
 export function chunkNote(note: Note): NoteChunk[] {
-  return chunkText(note.content).map((text) => ({
+  const header = [note.title, note.subject].filter(Boolean).join(' ').trim();
+  const searchable = header ? `${header}.\n${note.content}` : note.content;
+  return chunkText(searchable).map((text) => ({
     noteId: note.id,
     noteTitle: note.title,
     text,
