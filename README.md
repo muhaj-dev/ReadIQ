@@ -77,6 +77,7 @@ The same grounded material powers **quizzes** (MCQs generated only from a subjec
 |---|---|---|
 | 💬 **Ask ★ (grounded chat)** | Answers **only** from saved notes; streams live; tags every answer **📌 From your notes** (tap → source). Honest fallback when nothing matches. | `chat/completions` **(streamed)** — `btl-2` |
 | 🧠 **Memory Panel** | A live, searchable list of every saved note — the visible proof the app remembers | — (local SQLite) |
+| ✍️ **Note Reader — highlight & comment** | Open any note in a clean, distraction-free reader and study **actively**: drag to select text, then **highlight** it (choose from several colours) or attach a **margin comment**. Highlights and comments are baked into the note and **persist across sessions**, so the note stays marked up every time you reopen it. You can also **Broadcast** the note to audio right from the reader toolbar. | — (local, WebView) |
 | 📝 **Auto-Quiz** | Generates grounded MCQs per subject, scores the run, reveals the correct option + a short "why" per miss | `chat/completions` **(JSON)** — `btl-2` |
 | 📸 **Scan a note** | Photograph a page (even handwriting); AI reads it into a saved note | `chat/completions` **(vision OCR)** — `gemini-2.5-flash` |
 | 📄 **Upload a file** | PDF → text via BTL vision · .docx → text on-device (jszip); summarized and saved | `chat/completions` **(vision)** — `gemini-2.5-flash` |
@@ -84,7 +85,6 @@ The same grounded material powers **quizzes** (MCQs generated only from a subjec
 | 🎧 **Broadcast a note** | Turns a single saved note into a two-host audio conversation ("From Your Notes") the student **listens** to — script grounded **only** in that note, played aloud on-device. Reachable from Note Details and the reader toolbar. | `chat/completions` — `btl-2` |
 | 📅 **Deadlines** | Colour-coded exam/assignment dates with countdowns, a calendar, and reminder toggles | — (local SQLite) |
 | 📈 **Progress** | Streaks, quiz scores, and weak-topic tracking that show improvement over time | — |
-| 📖 **PDF Reader** | Renders an uploaded PDF exactly, with on-page highlight + comment + listen | — (on-device pdf.js) |
 | 🎨 **Calm, polished UI** | Notion-meets-Duolingo light theme — rounded cards, soft shadows, generous white space, tuned to reduce exam anxiety | — |
 
 ---
@@ -154,7 +154,7 @@ Profile stats (notes · AI answers · streak · achievements) · Settings (appea
 - `expo-camera` + `expo-image-picker` — Scan (photo → OCR)
 - `expo-audio` — lecture Record
 - `expo-document-picker` + `expo-file-system` — Upload (PDF / .docx)
-- `react-native-webview` + pdf.js — exact PDF rendering with annotations
+- `react-native-webview` — the highlight + comment Note Reader
 - `jszip` — on-device .docx extraction (zero BTL credits)
 - `expo-speech` — study-podcast read-aloud
 
@@ -320,7 +320,6 @@ An honest account of what was hard:
 - **Reading PDFs through a chat gateway.** With no OCR endpoint, we route PDFs and photos through a *vision chat model* as `image_url` content parts — the same proven path for both Scan and Upload.
 - **Streaming in React Native.** Standard `fetch` doesn't expose a readable stream in RN; we used `expo/fetch` and hand-parsed the SSE `data:` frames to make Ask ★ feel instant.
 - **A tiny credit budget.** ~$0.50 of runtime credits for the whole build *and* demo forced disciplined request-shaping and aggressive SQLite caching so nothing is ever billed twice.
-- **Rendering exact PDFs in Expo Go.** We embedded pdf.js in a WebView (no native `react-native-pdf`, no dev build) with geometry-based highlight/comment annotations that re-project at any zoom.
 
 ---
 
