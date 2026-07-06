@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AchievementRow } from '@/components/achievements/achievement-row';
-import { AchievementCard } from '@/components/home/achievement-card';
+import { AchievementSummary } from '@/components/achievements/achievement-summary';
 import { SettingsHeader } from '@/components/settings/settings-header';
 import { encourageAchievements } from '@/lib/achievements';
 import { useAchievements } from '@/hooks/use-achievements';
@@ -21,7 +21,7 @@ export default function AchievementsScreen() {
         <SettingsHeader title="Achievements" accent />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <AchievementCard
+          <AchievementSummary
             unlockedCount={unlockedCount}
             total={total}
             encouragement={encourageAchievements(unlockedCount, total)}

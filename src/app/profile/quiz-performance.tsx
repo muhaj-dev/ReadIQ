@@ -5,12 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyHint } from '@/components/home/empty-hint';
 import { SectionHeader } from '@/components/home/section-header';
-import { StatCards } from '@/components/home/stat-cards';
 import { WeakTopicChips } from '@/components/home/weak-topic-chips';
-import { PerfHero } from '@/components/profile/perf-hero';
 import { QuizAttemptRow } from '@/components/profile/quiz-attempt-row';
+import { QuizPerfHero } from '@/components/profile/quiz-perf-hero';
 import { SettingsHeader } from '@/components/settings/settings-header';
-import type { DashboardStat } from '@/data/dashboard';
 import { useTheme } from '@/hooks/use-theme';
 import { quizPerformance } from '@/lib/profile-stats';
 import { summarizeWeakTopics } from '@/lib/quiz-stats';
@@ -26,12 +24,6 @@ export default function QuizPerformanceScreen() {
   const results = useQuizStore((s) => s.results);
   const perf = quizPerformance(results);
   const weakTopics = summarizeWeakTopics(results);
-
-  const stats: DashboardStat[] = [
-    { value: String(perf.quizzesTaken), label: 'Quizzes', tone: 'primary' },
-    { value: `${perf.bestPercent}%`, label: 'Best Score', tone: 'secondary' },
-    { value: String(perf.questionsAnswered), label: 'Answered', tone: 'deep' },
-  ];
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.surface }}>
@@ -50,12 +42,13 @@ export default function QuizPerformanceScreen() {
             />
           ) : (
             <>
-              <PerfHero
+              <QuizPerfHero
                 averagePercent={perf.averagePercent}
                 bestPercent={perf.bestPercent}
+                quizzesTaken={perf.quizzesTaken}
+                questionsAnswered={perf.questionsAnswered}
                 encouragement={perf.encouragement}
               />
-              <StatCards stats={stats} />
 
               <View className="gap-3">
                 <SectionHeader title="Recent Quizzes" />
