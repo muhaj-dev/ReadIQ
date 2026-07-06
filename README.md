@@ -264,9 +264,6 @@ Other scripts: `npm run android` · `npm run ios` · `npm run web` · `npm run l
 |---|---|---|
 | `EXPO_PUBLIC_BTL_API_KEY` | ✅ | Scoped BTL runtime key — read only in `lib/btl.ts` |
 | `EXPO_PUBLIC_BTL_BASE_URL` | ✅ | BTL gateway base URL (includes `/v1`) |
-| `EXPO_PUBLIC_OPENAI_API_KEY` | optional | Whisper transcription for lecture Record |
-| `EXPO_PUBLIC_OPENAI_BASE_URL` | optional | Override for a Whisper-compatible host (e.g. Groq) |
-| `EXPO_PUBLIC_OPENAI_STT_MODEL` | optional | Whisper model name (default `whisper-1`) |
 
 `.env` is git-ignored. Never commit it.
 
