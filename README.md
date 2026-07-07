@@ -141,9 +141,9 @@ Profile stats (notes · AI answers · streak · achievements) · Settings (appea
 - Fonts: Manrope + Hanken Grotesk
 
 **AI — all via the BTL Runtime**
-- **BTL Runtime** — OpenAI-compatible LLM gateway (`/v1/chat/completions`, `/v1/models`)
+- **BTL Runtime** — OpenAI-compatible LLM gateway (`/v1/chat/completions`, `/v1/embeddings`, `/v1/models`)
 - A single thin client in [`src/lib/btl.ts`](src/lib/btl.ts) — the **only** file that reads BTL credentials
-- Default chat model **`btl-2`** · vision/OCR model **`gemini-2.5-flash`** (both behind the gateway)
+- Default chat model **`btl-2`** · vision/OCR model **`gemini-2.5-flash`** · embedding model **`text-embedding-3-small`** (all behind the gateway)
 
 **State & Storage (local)**
 - Zustand — global app state
@@ -170,7 +170,7 @@ Profile stats (notes · AI answers · streak · achievements) · Settings (appea
 │        ▼                                                              │
 │   ┌──────────────┐   split into chunks   ┌────────────────────────┐   │
 │   │  expo-sqlite │ ◄──────────────────── │  lib/retrieval.ts      │   │
-│   │  (notes,     │                       │  (chunk + lexical rank)│   │
+│   │  (notes,     │                       │  (embed + cosine rank) │   │
 │   │   chunks)    │ ────── top-K ───────► │   = the GROUNDING GATE │   │
 │   └──────────────┘                       └───────────┬────────────┘   │
 │                                                       │ retrieved chunks
@@ -184,9 +184,9 @@ Profile stats (notes · AI answers · streak · achievements) · Settings (appea
                                                     ▼
                         ┌────────────────────────────────────────────┐
                         │            BTL RUNTIME GATEWAY             │
-                        │  /v1/chat/completions  ·  /v1/models       │
+                        │  /v1/chat/completions · /v1/embeddings     │
                         │  btl-2 (chat/quiz/summary/podcast)         │
-                        │  gemini-2.5-flash (scan OCR · PDF read)    │
+                        │  gemini-2.5-flash · text-embedding-3-small │
                         └───────────────────┬────────────────────────┘
                                             │ streamed answer + citations
                                             ▼
@@ -272,7 +272,7 @@ Other scripts: `npm run android` · `npm run ios` · `npm run web` · `npm run l
 
 ## 9. BTL Runtime Usage
 
-**Every AI capability in readIQ is powered by the BTL Runtime** — Bad Theory Labs' OpenAI-compatible gateway at `EXPO_PUBLIC_BTL_BASE_URL` (e.g. `https://api.badtheorylabs.com/v1`). We route **breadth _and_ depth** through it: streamed chat, structured JSON generation, vision OCR, and document reading — all behind a single thin client, [`src/lib/btl.ts`](src/lib/btl.ts), which is the **only** file in the codebase that reads the BTL key.
+**Every AI capability in readIQ is powered by the BTL Runtime** — Bad Theory Labs' OpenAI-compatible gateway at `EXPO_PUBLIC_BTL_BASE_URL` (e.g. `https://api.badtheorylabs.com/v1`). We route **breadth _and_ depth** through it: streamed chat, structured JSON generation, vision OCR, document reading, and semantic embeddings for retrieval — all behind a single thin client, [`src/lib/btl.ts`](src/lib/btl.ts), which is the **only** file in the codebase that reads the BTL key.
 
 ### Endpoints & models
 
@@ -284,7 +284,8 @@ Other scripts: `npm run android` · `npm run ios` · `npm run web` · `npm run l
 | 4 | **Broadcast script** (two-host podcast) | `POST /v1/chat/completions` | `btl-2` | Two-host "From Your Notes" dialogue grounded in one note; a long note is split into ordered segments so the episode covers it **end-to-end** (multiple grounded calls per episode), cached by content hash |
 | 5 | **Scan OCR** (photo → text) | `POST /v1/chat/completions` · **vision** | `gemini-2.5-flash` | Photo sent as an `image_url` content part; reads printed *and* handwritten pages |
 | 6 | **PDF text extraction** (upload) | `POST /v1/chat/completions` · **vision** | `gemini-2.5-flash` | PDF read via the same vision content path into the note body |
-| 7 | **Connectivity / health check** | `GET /v1/models` | — | Free check (no tokens spent) that gates the "AI is set up" state |
+| 7 | **Semantic retrieval** (the grounding gate) | `POST /v1/embeddings` | `text-embedding-3-small` | Embed note chunks on save **and** the question on ask → cosine-rank; only chunks that clear the similarity threshold are sent to the model |
+| 8 | **Connectivity / health check** | `GET /v1/models` | — | Free check (no tokens spent) that gates the "AI is set up" state |
 
 ### How each call is made
 
@@ -307,9 +308,9 @@ line, `EXPO_PUBLIC_GROQ_API_KEY`; falls back to OpenAI `whisper-1`) — kept iso
 lands on BTL. When no transcription key is set, Record degrades gracefully to a manual, editable
 transcript — it never blocks a save.
 
-### Retrieval note (why lexical, not vectors)
+### Retrieval note — semantic grounding (with a lexical fallback)
 
-The BTL model catalog surfaced **no dedicated text-embedding model**, so retrieval is **lexical** (keyword / overlap scoring over note chunks) rather than vector cosine similarity. This does **not** weaken the trust promise: grounding is enforced by the **retrieval gate + citations**, not by vectors specifically. The gate is never dropped — if no chunk clears the bar, readIQ refuses to call the model at all.
+Retrieval is **semantic**: on save, each note chunk is embedded via `POST /v1/embeddings` (`text-embedding-3-small`, 1536-dim); on a question, the query is embedded the same way and chunks are ranked by **cosine similarity** — matching on meaning, not shared keywords. A tuned absolute-similarity threshold is the **grounding gate**: if no chunk clears it, readIQ refuses to call the model and shows the honest fallback. If embeddings are ever unavailable (offline, or no key), retrieval **degrades gracefully to lexical** (IDF-weighted keyword overlap) behind the same gate — so the trust promise never depends on the network, and grounding is enforced by the **gate + citations**, not by vectors specifically.
 
 > **Why route everything through BTL?** It's the hackathon's #1 scoring lever (30 pts + the top tie-breaker) *and* the right architecture: one OpenAI-compatible gateway, one credential file, one place to swap models. Grounded answers, quizzes, OCR, PDF reading, and podcast scripts all flow through it.
 
@@ -320,7 +321,7 @@ The BTL model catalog surfaced **no dedicated text-embedding model**, so retriev
 An honest account of what was hard:
 
 - **Proving BTL couldn't transcribe audio.** We spent real credits verifying three separate audio paths (`/audio/transcriptions`, `gpt-audio`, `voxtral`) before concluding BTL has no viable ASR — then designed the Whisper fallback so the AI summary still runs on `btl-2`.
-- **No embedding model in the catalog.** We had to redesign retrieval around lexical scoring while keeping the grounding gate airtight, so "answers only from your notes" holds without vectors.
+- **Embeddings landed mid-build.** The catalog had no embedding model early on, so retrieval shipped **lexical** first; when `text-embedding-3-small` appeared we moved grounding to **semantic cosine ranking** and kept the lexical path as an offline fallback — the grounding gate stayed airtight through the swap.
 - **Reading PDFs through a chat gateway.** With no OCR endpoint, we route PDFs and photos through a *vision chat model* as `image_url` content parts — the same proven path for both Scan and Upload.
 - **Streaming in React Native.** Standard `fetch` doesn't expose a readable stream in RN; we used `expo/fetch` and hand-parsed the SSE `data:` frames to make Ask ★ feel instant.
 - **A tiny credit budget.** ~$0.50 of runtime credits for the whole build *and* demo forced disciplined request-shaping and aggressive SQLite caching so nothing is ever billed twice.
@@ -329,7 +330,7 @@ An honest account of what was hard:
 
 ## 11. Future Work
 
-- 🔎 **Vector retrieval** if/when a BTL embedding model lands — swap the lexical ranker behind the same gate
+- 🔎 **Re-ranking** on top of the live semantic embeddings (`text-embedding-3-small`) — a cross-encoder re-rank pass behind the same grounding gate
 - 🗣️ **Flashcard quiz mode** alongside MCQs
 - 🔔 **OS deadline notifications** (currently a saved reminder preference, kept dependency-free for Expo Go)
 - ⚙️ **In-app model picker** (Settings → AI Model) across the BTL catalog
@@ -347,7 +348,7 @@ A 2-minute walkthrough hitting the hero moments, in order:
 3. **Record** — record a short lecture; it transcribes, summarizes, and saves.
 4. **Quiz + Deadlines** — generate a grounded quiz from a subject; add a colour-coded exam deadline.
 
-**▶️ Watch the demo:** _add link here before submitting_
+**▶️ Watch the demo:** https://youtube.com/shorts/ufTUfARxDho
 
 ---
 
@@ -367,16 +368,17 @@ A 2-minute walkthrough hitting the hero moments, in order:
 |---|---|
 | **GitHub / public code link** | https://github.com/muhaj-dev/ReadIQ |
 | **Short description** | An AI study companion that answers only from a student's own saved notes and proves it with a "📌 From your notes" citation — powered end-to-end by the BTL Runtime |
-| **BTL runtime endpoint(s) used** | `POST /v1/chat/completions` — streamed (grounded Ask ★) and non-streamed (quiz JSON, note/lecture summary, podcast script, **scan OCR** & **PDF extraction** via `gemini-2.5-flash` vision) — plus `GET /v1/models` for the health check |
-| **2-minute demo video** | _add link before submitting_ |
-| **Team name** | **readIQ** |
+| **BTL runtime endpoint(s) used** | `POST /v1/chat/completions` — streamed (grounded Ask ★) and non-streamed (quiz JSON, note/lecture summary, podcast script, **scan OCR** & **PDF extraction** via `gemini-2.5-flash` vision) · `POST /v1/embeddings` (`text-embedding-3-small`, semantic retrieval) · `GET /v1/models` (health check) |
+| **2-minute demo video** | https://youtube.com/shorts/ufTUfARxDho |
+| **Team name** | **studiome** |
+| **Project name** | **readIQ** |
 | **Members** | Ajibade Muhammod · Fuad Adeshina |
 
 ---
 
 ## 15. Team & License
 
-**Team — readIQ**
+**Team — studiome** · project **readIQ**
 - **Ajibade Muhammod** — Developer — GitHub [@muhaj-dev](https://github.com/muhaj-dev)
 - **Fuad Adeshina** — Designer
 

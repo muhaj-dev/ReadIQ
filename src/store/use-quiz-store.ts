@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import { BtlError } from '@/lib/btl';
 import { getQuiz, insertQuizResult, listQuizResults, saveQuiz } from '@/lib/db';
 import { hashContent } from '@/lib/hash';
-import { generateQuiz } from '@/lib/quizgen';
+import { generateQuiz, shuffleQuestionOptions } from '@/lib/quizgen';
 import { combineContent, DEFAULT_QUIZ_COUNT } from '@/lib/quiz-sources';
 import type { GeneratedQuiz, MissedQuestion, QuizResult, QuizSource } from '@/types/quiz';
 
@@ -131,7 +131,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         if (stored && stored.contentHash === hash && stored.questions.length >= count) {
           const quiz: GeneratedQuiz = {
             ...stored,
-            questions: stored.questions.slice(0, count),
+            // Re-letter answers on read — quizzes cached before the de-bias fix
+            // still cluster the correct answer under B, and regenerating costs credits.
+            questions: stored.questions.slice(0, count).map(shuffleQuestionOptions),
             requestedCount: count,
           };
           markSeen(source.id, quiz);

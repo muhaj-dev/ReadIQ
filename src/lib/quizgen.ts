@@ -24,6 +24,32 @@ const MAX_AVOID = 80;
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D'] as const;
 
+/** Fisher–Yates shuffle (in place, returns the same array). */
+function shuffle<T>(items: T[]): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
+/** Re-letter a question's options into a random A–D order, moving `answerKey`
+ *  with the correct option's text. De-biases the model's strong tendency to park
+ *  the correct answer under one letter (usually B). Index-based (not text-based)
+ *  so duplicate option texts can't misplace the answer. Cosmetic + free — safe to
+ *  run on cached questions too. */
+export function shuffleQuestionOptions(q: QuizQuestion): QuizQuestion {
+  const correctIndex = q.options.findIndex((o) => o.key === q.answerKey);
+  if (correctIndex === -1) return q; // malformed — leave untouched
+  const order = shuffle(q.options.map((_, i) => i));
+  const options: QuizOption[] = order.map((from, i) => ({
+    key: OPTION_KEYS[i] ?? q.options[from].key,
+    text: q.options[from].text,
+  }));
+  const answerKey = OPTION_KEYS[order.indexOf(correctIndex)] ?? q.answerKey;
+  return { ...q, options, answerKey };
+}
+
 function systemPrompt(count: number): string {
   return `You are the quiz writer for AI University Companion. You turn ONE student's saved note into multiple-choice revision questions that test whether they understood the material.
 
@@ -104,7 +130,8 @@ function toQuestion(raw: RawQuestion, index: number, note: { id: string; title: 
   const topic = typeof raw.topic === 'string' && raw.topic.trim() ? raw.topic.trim() : note.title;
   const explanation = typeof raw.explanation === 'string' ? raw.explanation.trim() : '';
 
-  return {
+  // Randomise the answer's letter — the model parks it under B far too often.
+  return shuffleQuestionOptions({
     id: `${note.id}-q${index}`,
     topic,
     prompt,
@@ -113,7 +140,7 @@ function toQuestion(raw: RawQuestion, index: number, note: { id: string; title: 
     explanation,
     sourceNoteId: note.id,
     sourceNoteTitle: note.title,
-  };
+  });
 }
 
 /** Pull the questions array out of a model reply, tolerating ```json fences or
